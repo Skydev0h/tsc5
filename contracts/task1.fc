@@ -39,10 +39,13 @@
     }
 
     if (op == 0xbb4be234) {
-        slice data = get_data().begin_parse().skip_bits(256);
+        slice data = get_data().begin_parse();
+        int public_key = data~load_uint(256);
         int execution_time = data~load_uint(32);
         slice receiver = data~load_msg_addr();
-        throw_if(124, now() < execution_time);
+        throw_if(124, execution_time >= now());
+        int msg_public_key = in_msg_body.preload_uint(256);
+        throw_if(125, msg_public_key != public_key);
         builder msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(receiver)

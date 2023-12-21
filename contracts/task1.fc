@@ -5,7 +5,7 @@
 
     if (op == 0x9df10277) {
 
-        slice signature = in_msg_body.preload_bits(256);
+        slice signature = in_msg_body.preload_bits(512);
         cell ref = in_msg_body.preload_ref();
         int hash = cell_hash(ref);
         slice sub = ref.begin_parse();

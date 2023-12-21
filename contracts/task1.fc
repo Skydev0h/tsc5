@@ -1,7 +1,11 @@
 #include "imports/stdlib.fc";
 
+;; LDUQ: s - x s' -1 or s 0 --IFNOTRET--> x s' or RET
+(int, slice) load_uint32_or_ret(slice s) impure asm "32 LDUQ" "IFNOTRET";
+
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    int op = in_msg_body~load_uint(32);
+    ;; int op = in_msg_body~load_uint(32);
+    (int op, in_msg_body) = in_msg_body.load_uint32_or_ret();
 
     if (op == 0x9df10277) {
 

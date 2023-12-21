@@ -18,7 +18,8 @@
         int hash = cell_hash(ref);
         slice sub = ref.begin_parse();
         int locked_for = sub~load_uint(32);
-        int new_seqno = sub.preload_uint(32);
+        int new_seqno = sub~load_uint(32);
+        sub.end_parse();
 
         slice data = get_data().begin_parse();
         int public_key = data~load_uint(256);
@@ -51,8 +52,10 @@
         int execution_time = data~load_uint(32);
         slice receiver = data~load_msg_addr();
         throw_if(124, execution_time >= now());
-        ;; int msg_public_key = in_msg_body.preload_uint(256);
+        ;; int msg_public_key = body.preload_uint(256);
         ;; throw_if(125, msg_public_key != public_key);
+
+        ;; body.preload_uint(256).end_parse();
 
         accept_message();
 

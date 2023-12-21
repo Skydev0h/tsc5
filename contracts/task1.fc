@@ -8,8 +8,8 @@
 }
 
 () recv_external(slice body) impure {
-    ;; int op = body~load_uint(32);
-    (int op, body) = body.load_uint32_or_ret();
+    int op = body~load_uint(32);
+    ;; (int op, body) = body.load_uint32_or_ret();
 
     if (op == 0x9df10277) {
 
@@ -32,12 +32,14 @@
         throw_if(122, execution_time < now());
         throw_if(123, now() + locked_for < execution_time);
 
+        accept_message();
+
         set_data(begin_cell()
-        .store_uint(public_key, 256)
-        .store_uint(now() + locked_for, 32)
-        .store_slice(receiver)
-        .store_uint(new_seqno, 32)
-        .end_cell());
+            .store_uint(public_key, 256)
+            .store_uint(now() + locked_for, 32)
+            .store_slice(receiver)
+            .store_uint(new_seqno, 32)
+            .end_cell());
 
         return ();
     }
@@ -51,12 +53,15 @@
         throw_if(124, execution_time >= now());
         ;; int msg_public_key = in_msg_body.preload_uint(256);
         ;; throw_if(125, msg_public_key != public_key);
+
+        accept_message();
+
         builder msg = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(receiver)
-        .store_grams(0)
-        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
-        send_raw_message(msg.end_cell(), 128);
+            .store_uint(0x18, 6)
+            .store_slice(receiver)
+            .store_grams(0)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+            send_raw_message(msg.end_cell(), 128);
         return ();
     }
 

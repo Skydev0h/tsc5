@@ -61,5 +61,5 @@ int get_seqno() method_id {
 }
 
 int get_execution_time() method_id {
-    return get_data().begin_parse().skip_bits(256).preload_uint(32);
+    return get_data().begin_parse().skip_bits(256).preload_uint(32) - now();
 }

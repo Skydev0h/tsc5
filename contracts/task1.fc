@@ -7,11 +7,14 @@
 
 }
 
-() recv_external(slice body) impure {
-    int op = body~load_uint(32);
-    ;; (int op, body) = body.load_uint32_or_ret();
+(slice, int) check_and_remove_0x9df10277(slice body) impure asm "x{9df10277} SDBEGINSQ";
 
-    if (op == 0x9df10277) {
+(slice) check_and_remove_0xbb4be234_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
+
+() recv_external(slice body) impure {
+    (body, int is_0x9df10277) = check_and_remove_0x9df10277(body);
+
+    if (is_0x9df10277) {
 
         slice signature = body.skip_bits(64).preload_bits(512);
         cell ref = body.preload_ref();
@@ -24,7 +27,7 @@
         slice data = get_data().begin_parse();
         int public_key = data~load_uint(256);
         int execution_time = data~load_uint(32);
-        slice receiver = data~load_bits(3 + 8 + 256);
+        slice receiver = data~load_msg_addr();
         int seqno = data.preload_uint(32);
 
         throw_if(119, new_seqno != seqno + 1);
@@ -45,30 +48,27 @@
         return ();
     }
 
-    if (op == 0xbb4be234) {
-        slice data = get_data().begin_parse();
-        data = data.skip_bits(256);
-        ;; int public_key = data~load_uint(256);
-        int execution_time = data~load_uint(32);
-        slice receiver = data~load_msg_addr();
-        throw_if(124, execution_time >= now());
+    body = check_and_remove_0xbb4be234_or_ret(body);
 
-        accept_message();
+    slice data = get_data().begin_parse();
+    data = data.skip_bits(256);
+    ;; int public_key = data~load_uint(256);
+    int execution_time = data~load_uint(32);
+    slice receiver = data~load_msg_addr();
+    throw_if(124, execution_time >= now());
 
-        builder msg = begin_cell()
-            .store_uint(0x18, 6)
-            .store_slice(receiver)
-            .store_grams(0)
-            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
-            send_raw_message(msg.end_cell(), 128);
-        return ();
-    }
+    accept_message();
 
+    builder msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(receiver)
+        .store_grams(0)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        send_raw_message(msg.end_cell(), 128);
 }
 
 int get_seqno() method_id {
-    slice data = get_data().begin_parse().skip_bits(256 + 32);
-    data = data.skip_bits(3 + 8 + 256);
+    slice data = get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256);
     return data.preload_uint(32);
 }
 

@@ -24,7 +24,7 @@
         slice data = get_data().begin_parse();
         int public_key = data~load_uint(256);
         int execution_time = data~load_uint(32);
-        slice receiver = data~load_msg_addr();
+        slice receiver = data~load_bits(3 + 8 + 256);
         int seqno = data.preload_uint(32);
 
         throw_if(119, new_seqno != seqno + 1);
@@ -52,10 +52,6 @@
         int execution_time = data~load_uint(32);
         slice receiver = data~load_msg_addr();
         throw_if(124, execution_time >= now());
-        ;; int msg_public_key = body.preload_uint(256);
-        ;; throw_if(125, msg_public_key != public_key);
-
-        ;; body.preload_uint(256).end_parse();
 
         accept_message();
 
@@ -72,7 +68,7 @@
 
 int get_seqno() method_id {
     slice data = get_data().begin_parse().skip_bits(256 + 32);
-    data~load_msg_addr();
+    data = data.skip_bits(3 + 8 + 256);
     return data.preload_uint(32);
 }
 

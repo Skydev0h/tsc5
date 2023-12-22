@@ -13,7 +13,7 @@
 
     if (op == 0x9df10277) {
 
-        slice signature = body.preload_bits(512);
+        slice signature = body.skip_bits(32).preload_bits(512);
         cell ref = body.preload_ref();
         int hash = cell_hash(ref);
         slice sub = ref.begin_parse();

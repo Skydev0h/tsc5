@@ -64,14 +64,58 @@
 
 }
 
+;; get_seqno get_execution_time
+int getter(int id) method_id(111) {
+    slice d = get_data().begin_parse().skip_bits(256);
+    if (id == 77871) { ;; get_execution_time
+        d = d.skip_bits(32 + 3 + 8 + 256);
+    }
+    return d.preload_uint(32);
+}
+
+{-
+;; 00010011000000101111 1302F 77871 DECLMETHOD get_seqno
 int get_seqno() method_id {
     return get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
 }
 
+;; 00010110111001000110 16E46 93766 DECLMETHOD get_execution_time
 int get_execution_time() method_id {
     return get_data().begin_parse().skip_bits(256).preload_uint(32);
 }
+-}
 
+() __deep_fifting__() impure asm
+    "@atend @ 1 { execute"
+    "    current@ context@ current!"
+    "    {"
+    "        }END> b>"
+    "        <{"
+    "        SETCP0 DUP BITSIZE 1 RSHIFT#"
+    "        IFNOTJMP:<{"
+    "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+    "        }>"
+    "        swap <s ref@ 111 swap @procdictkeylen idict@ { B{6E6F206D65746820313131} B>$ abort } ifnot @addop"
+{-
+    "        swap <s ref@"
+    "         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
+    "        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
+    "        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
+    "        24 RSHIFT# 0x13 EQINT IFJMP:<{" ;; 13 02F
+    "           over <s ref@ 77871 swap @procdictkeylen idict@ { B{6E6F206D657468203737383731} B>$ abort } ifnot @addop"
+    "        }>" ;; 16 E46
+    "        swap <s ref@ 93766 swap @procdictkeylen idict@ { B{6E6F206D657468203933373636} B>$ abort } ifnot .s @addop"
+;;  "        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
+-}
+    "        }> b>"
+    "    } : }END>c"
+    "    current@ context! current!"
+    "} does @atend !"
+;
+
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }
+
+{-
 () __deep_fifting__() impure asm
     "@atend @ 1 { execute"
     "    current@ context@ current!"
@@ -83,8 +127,8 @@ int get_execution_time() method_id {
     "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
     "        }>"
     "        swap <s ref@"
-    "         0 swap @procdictkeylen idict- drop"  ;; drop recv_internal
-    "        -1 swap @procdictkeylen idict- drop"  ;; drop recv_external
+    "         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
+    "        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
     "        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
     "        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
     "        b>"
@@ -92,5 +136,4 @@ int get_execution_time() method_id {
     "    current@ context! current!"
     "} does @atend !"
 ;
-
-() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }
+-}

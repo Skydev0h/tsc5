@@ -6,13 +6,11 @@
 (slice, ()) is_update_call_or_ret(slice body) impure asm "x{9df10277} SDBEGINSQ" "IFNOTRET";
 (slice, ()) is_claim_call_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
 
-() claim_sub(slice body) impure inline_ref {
-
-    ;; body~is_claim_call_or_ret();
+() claim_sub() impure inline_ref {
 
     slice data = get_data().begin_parse().skip_bits(256);
     int execution_time = data~load_uint(32);
-    slice receiver = data.preload_bits(3 + 8 + 256);
+    slice receiver = data~load_msg_addr();
     throw_if(124, execution_time >= now());
 
     accept_message();
@@ -46,13 +44,14 @@
         throw_unless(120, check_signature(hash, signature, public_key));
         throw_if(121, locked_for <= 0);
         throw_if(122, execution_time < now());
-        throw_if(123, now() + locked_for < execution_time);
+        int new_locked_for = now() + locked_for;
+        throw_if(123, new_locked_for < execution_time);
 
         accept_message();
 
         set_data(begin_cell()
             .store_uint(public_key, 256)
-            .store_uint(now() + locked_for, 32)
+            .store_uint(new_locked_for, 32)
             .store_slice(receiver)
             .store_uint(new_seqno, 32)
             .end_cell());
@@ -60,7 +59,9 @@
         return ();
     }
 
-    claim_sub(body);
+    body~is_claim_call_or_ret();
+
+    claim_sub();
 
 }
 

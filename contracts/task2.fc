@@ -121,7 +121,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
     slice jetton_address = full_msg_slice~load_msg_addr();
 
-    in_msg_body = in_msg_body.skip_bits(64);
+    int query_id = in_msg_body~load_uint(64);
+    ;; in_msg_body = in_msg_body.skip_bits(64);
     int amount = in_msg_body~load_coins();
 
     tuple stk = null();
@@ -145,7 +146,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     .store_coins(20000000) ;;
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
     .store_uint(0x0f8a7ea5, 32)
-    .store_uint(0, 64); ;; query_id:uint64
+    .store_uint(query_id, 64); ;; query_id:uint64
 
     do {
 

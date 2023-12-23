@@ -1,7 +1,29 @@
 #include "imports/stdlib.fc";
 
 (slice, int) is_update_call(slice body) impure asm "x{9df10277} SDBEGINSQ";
+(slice, int) is_claim_call(slice body) impure asm "x{bb4be234} SDBEGINSQ";
+
+(slice, ()) is_update_call_or_ret(slice body) impure asm "x{9df10277} SDBEGINSQ" "IFNOTRET";
 (slice, ()) is_claim_call_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
+
+() claim_sub(slice body) impure inline_ref {
+
+    body~is_claim_call_or_ret();
+
+    slice data = get_data().begin_parse().skip_bits(256);
+    int execution_time = data~load_uint(32);
+    slice receiver = data~load_msg_addr();
+    throw_if(124, execution_time >= now());
+
+    accept_message();
+
+    builder msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(receiver)
+    .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
+    send_raw_message(msg.end_cell(), 128);
+
+}
 
 () main(slice body, int is_external) {
 
@@ -38,20 +60,7 @@
         return ();
     }
 
-    body~is_claim_call_or_ret();
-
-    slice data = get_data().begin_parse().skip_bits(256);
-    int execution_time = data~load_uint(32);
-    slice receiver = data~load_msg_addr();
-    throw_if(124, execution_time >= now());
-
-    accept_message();
-
-    builder msg = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(receiver)
-        .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
-    send_raw_message(msg.end_cell(), 128);
+    claim_sub(body);
 
 }
 
@@ -74,8 +83,9 @@ int get_execution_time() method_id {
     "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
     "        }>"
     "        swap <s ref@"
-    "         0 swap @procdictkeylen idict- drop" ;; drop recv_internal
-    "        -1 swap @procdictkeylen idict- drop" ;; drop recv_external
+    "         0 swap @procdictkeylen idict- drop"  ;; drop recv_internal
+    "        -1 swap @procdictkeylen idict- drop"  ;; drop recv_external
+    "        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
     "        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
     "        b>"
     "    } : }END>c"
@@ -83,4 +93,4 @@ int get_execution_time() method_id {
     "} does @atend !"
 ;
 
-() __do_deep_fifting__() { __deep_fifting__(); }
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

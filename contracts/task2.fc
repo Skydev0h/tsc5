@@ -83,7 +83,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             send_raw_message(
                 base
                     .store_slice(user_data.first())
-                    .store_coins(user_data.second() * amount / total_share)
+                    .store_coins(muldiv(user_data.second(), amount, total_share))
                     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                     .end_cell(),
                 1);
@@ -166,7 +166,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             tuple user_data = stk~list_next();
             send_raw_message(
                 base
-                    .store_coins(user_data.second() * amount / total_share) ;; amount:(VarUInteger 16)
+                    .store_coins(muldiv(user_data.second(), amount, total_share)) ;; amount:(VarUInteger 16)
                     .store_slice(user_data.first()) ;; destination:MsgAddress
                     .store_slice(user_data.first()) ;; response_destination:MsgAddress
                     .store_dict(null())        ;; custom_payload:(Maybe ^Cell)

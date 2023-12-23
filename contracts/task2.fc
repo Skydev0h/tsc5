@@ -117,61 +117,62 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     }
 
     ;; in_msg_body~is_transfer_notification_call_or_ret();
-    if (op != 0x7362d09c) {
+    if (op == 0x7362d09c) {
+
+        slice data = get_data().begin_parse();
+        data~load_msg_addr();
+        cell users = data~load_dict();
+        throw_if(122, users.null?());
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice jetton_address = full_msg_slice~load_msg_addr();
+
+        int query_id = in_msg_body~load_uint(64);
+        ;; in_msg_body = in_msg_body.skip_bits(64);
+        int amount = in_msg_body~load_coins();
+
+        tuple stk = null();
+        int total_share = 0;
+
+        (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
+
+        while (ok) {
+
+            int user_share = user_value.preload_uint(32);
+            total_share = total_share + user_share;
+            stk = cons(pair(user_address, user_share), stk);
+
+            (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
+
+        }
+
+        builder base = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(jetton_address)
+            .store_coins(20000000) ;;
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_uint(0x0f8a7ea5, 32)
+            .store_uint(0, 64); ;; query_id:uint64
+
+        do {
+
+            tuple user_data = stk~list_next();
+            send_raw_message(
+                base
+                    .store_coins(user_data.second() * amount / total_share) ;; amount:(VarUInteger 16)
+                    .store_slice(user_data.first()) ;; destination:MsgAddress
+                    .store_slice(user_data.first()) ;; response_destination:MsgAddress
+                    .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+                    .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+                    .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
+                .end_cell(),
+                0);
+
+        }
+        until(stk.null?());
+
         return ();
     }
-
-    slice data = get_data().begin_parse();
-    data~load_msg_addr();
-    cell users = data~load_dict();
-    throw_if(122, users.null?());
-
-    slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-    slice jetton_address = full_msg_slice~load_msg_addr();
-
-    int query_id = in_msg_body~load_uint(64);
-    ;; in_msg_body = in_msg_body.skip_bits(64);
-    int amount = in_msg_body~load_coins();
-
-    tuple stk = null();
-    int total_share = 0;
-
-    (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
-
-    while (ok) {
-
-        int user_share = user_value.preload_uint(32);
-        total_share = total_share + user_share;
-        stk = cons(pair(user_address, user_share), stk);
-
-        (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
-
-    }
-
-    builder base = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(jetton_address)
-        .store_coins(20000000) ;;
-        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-        .store_uint(0x0f8a7ea5, 32)
-        .store_uint(0, 64); ;; query_id:uint64
-
-    do {
-
-        tuple user_data = stk~list_next();
-        send_raw_message(
-            base
-            .store_coins(user_data.second() * amount / total_share) ;; amount:(VarUInteger 16)
-            .store_slice(user_data.first()) ;; destination:MsgAddress
-            .store_slice(user_data.first()) ;; response_destination:MsgAddress
-            .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
-            .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-            .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
-            .end_cell(),
-            0);
-
-    }
-    until(stk.null?());
 
 }
 

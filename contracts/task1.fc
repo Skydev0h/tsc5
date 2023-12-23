@@ -1,13 +1,9 @@
 #include "imports/stdlib.fc";
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-
-}
-
 (slice, int) is_update_call(slice body) impure asm "x{9df10277} SDBEGINSQ";
 (slice, ()) is_claim_call_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
 
-() recv_external(slice body) impure {
+() main(slice body, int is_external) {
 
     if (body~is_update_call()) {
 
@@ -55,7 +51,8 @@
         .store_uint(0x18, 6)
         .store_slice(receiver)
         .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
-        send_raw_message(msg.end_cell(), 128);
+    send_raw_message(msg.end_cell(), 128);
+
 }
 
 int get_seqno() method_id {
@@ -69,8 +66,18 @@ int get_execution_time() method_id {
 () __deep_fifting__() impure asm
     "@atend @ 1 { execute"
     "    current@ context@ current!"
-    "    words {"
-    "        }END>c B{0D4572726F723A204F48204E4F2C207468652066696674696E6720697320746F6F206465657021204168682121} B>$ abort "
+    "    {"
+    "        }END> b>"
+    "        <b"
+    "        SETCP0 DUP BITSIZE 1 RSHIFT#"
+    "        IFNOTJMP:<{"
+    "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+    "        }>"
+    "        swap <s ref@"
+    "         0 swap @procdictkeylen idict- drop" ;; drop recv_internal
+    "        -1 swap @procdictkeylen idict- drop" ;; drop recv_external
+    "        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
+    "        b>"
     "    } : }END>c"
     "    current@ context! current!"
     "} does @atend !"

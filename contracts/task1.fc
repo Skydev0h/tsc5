@@ -8,19 +8,19 @@
 
 () claim_sub(slice body) impure inline_ref {
 
-    body~is_claim_call_or_ret();
+    ;; body~is_claim_call_or_ret();
 
     slice data = get_data().begin_parse().skip_bits(256);
     int execution_time = data~load_uint(32);
-    slice receiver = data~load_msg_addr();
+    slice receiver = data.preload_bits(3 + 8 + 256);
     throw_if(124, execution_time >= now());
 
     accept_message();
 
     builder msg = begin_cell()
-    .store_uint(0x18, 6)
-    .store_slice(receiver)
-    .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        .store_uint(0x18, 6)
+        .store_slice(receiver)
+        .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
     send_raw_message(msg.end_cell(), 128);
 
 }

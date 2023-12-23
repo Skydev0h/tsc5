@@ -62,17 +62,14 @@
     body~is_claim_call_or_ret();
 
     claim_sub();
-
 }
-
-int raw_tester(int id) asm "24 RSHIFT# 0x13 EQINT";
 
 ;; get_seqno get_execution_time
 int getter(int id) method_id(111) {
-    int skip = 0;
-    if (raw_tester(id)) { skip = 256 + 32 + 3 + 8 + 256; } else { skip = 256; }
-    slice d = get_data().begin_parse().skip_bits(skip);
-    return d.preload_uint(32);
+    if (id == 77871) { ;; get_seqno
+        return get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
+    }
+    return get_data().begin_parse().skip_bits(256).preload_uint(32);
 }
 
 {-

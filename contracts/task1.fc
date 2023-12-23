@@ -1,28 +1,22 @@
 #include "imports/stdlib.fc";
 
-;; LDUQ: s - x s' -1 or s 0 --IFNOTRET--> x s' or RET
-(int, slice) load_uint32_or_ret(slice s) impure asm "32 LDUQ" "IFNOTRET";
-
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
 
 }
 
-(slice, int) check_and_remove_0x9df10277(slice body) impure asm "x{9df10277} SDBEGINSQ";
-
-(slice) check_and_remove_0xbb4be234_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
+(slice, int) is_update_call(slice body) impure asm "x{9df10277} SDBEGINSQ";
+(slice, ()) is_claim_call_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
 
 () recv_external(slice body) impure {
-    (body, int is_0x9df10277) = check_and_remove_0x9df10277(body);
 
-    if (is_0x9df10277) {
+    if (body~is_update_call()) {
 
         slice signature = body.skip_bits(64).preload_bits(512);
         cell ref = body.preload_ref();
         int hash = cell_hash(ref);
         slice sub = ref.begin_parse();
         int locked_for = sub~load_uint(32);
-        int new_seqno = sub~load_uint(32);
-        sub.end_parse();
+        int new_seqno = sub.preload_uint(32);
 
         slice data = get_data().begin_parse();
         int public_key = data~load_uint(256);
@@ -48,7 +42,7 @@
         return ();
     }
 
-    body = check_and_remove_0xbb4be234_or_ret(body);
+    body~is_claim_call_or_ret();
 
     slice data = get_data().begin_parse().skip_bits(256);
     int execution_time = data~load_uint(32);
@@ -65,8 +59,7 @@
 }
 
 int get_seqno() method_id {
-    slice data = get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256);
-    return data.preload_uint(32);
+    return get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
 }
 
 int get_execution_time() method_id {

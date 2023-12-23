@@ -1,5 +1,174 @@
 #include "imports/stdlib.fc";
 
+(slice, int) is_add_user_call   (slice body) impure asm "x{368ddef3} SDBEGINSQ";
+(slice, int) is_remove_user_call(slice body) impure asm "x{278205c8} SDBEGINSQ";
+(slice, int) is_split_call      (slice body) impure asm "x{068530b3} SDBEGINSQ";
+(slice, ()) is_transfer_notification_call_or_ret(slice body) impure asm "x{7362d09c} SDBEGINSQ" "IFNOTRET";
+
+(slice, int) dict_get?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTGET" "NULLSWAPIFNOT";
+(cell, int) dict_delete?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTDEL";
+
+(slice, slice, int) dict_get_min?(cell dict, int key_len) asm (-> 1 0 2) "DICTMIN" "NULLSWAPIFNOT2";
+(slice, slice, int) dict_get_next?(cell dict, int key_len, slice pivot) asm(pivot dict key_len -> 1 0 2) "DICTGETNEXT" "NULLSWAPIFNOT2";
+
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
 
+    if (in_msg_body~is_add_user_call()) {
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data~load_dict();
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        throw_unless(120, equal_slices(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64);
+        slice address = in_msg_body~load_msg_addr();
+        slice share = in_msg_body.preload_bits(32);
+
+        users~dict_set(267, address, share);
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+            .end_cell());
+
+        return ();
+
+    }
+
+    if (in_msg_body~is_split_call()) {
+
+        slice data = get_data().begin_parse();
+        data~load_msg_addr();
+        cell users = data~load_dict();
+        throw_if(122, users.null?());
+
+        in_msg_body = in_msg_body.skip_bits(64);
+        int amount = in_msg_body~load_coins();
+
+        tuple stk = null();
+        int total_share = 0;
+
+        (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
+
+        while (ok) {
+
+            int user_share = user_value.preload_uint(32);
+            total_share = total_share + user_share;
+            stk = cons(pair(user_address, user_share), stk);
+
+            (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
+
+        }
+
+        builder base = begin_cell().store_uint(0x18, 6);
+
+        do {
+
+            tuple user_data = stk~list_next();
+            send_raw_message(
+                base
+                .store_slice(user_data.first())
+                .store_coins(user_data.second() * amount / total_share)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .end_cell(),
+                1);
+
+        }
+        until(stk.null?());
+
+        return ();
+
+    }
+
+    if (in_msg_body~is_remove_user_call()) {
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data~load_dict();
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        throw_unless(120, equal_slices(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64);
+        slice address = in_msg_body~load_msg_addr();
+
+        throw_unless(121, users~dict_delete?(267, address));
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+            .end_cell());
+
+        return ();
+
+    }
+
+    in_msg_body~is_transfer_notification_call_or_ret();
+
+    slice data = get_data().begin_parse();
+    data~load_msg_addr();
+    cell users = data~load_dict();
+    throw_if(122, users.null?());
+
+    slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+    slice jetton_address = full_msg_slice~load_msg_addr();
+
+    in_msg_body = in_msg_body.skip_bits(64);
+    int amount = in_msg_body~load_coins();
+
+    tuple stk = null();
+    int total_share = 0;
+
+    (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
+
+    while (ok) {
+
+        int user_share = user_value.preload_uint(32);
+        total_share = total_share + user_share;
+        stk = cons(pair(user_address, user_share), stk);
+
+        (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
+
+    }
+
+    builder base = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(jetton_address)
+    .store_coins(20000000) ;;
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(0x0f8a7ea5, 32)
+    .store_uint(0, 64); ;; query_id:uint64
+
+    do {
+
+        tuple user_data = stk~list_next();
+        send_raw_message(
+            base
+            .store_coins(user_data.second() * amount / total_share) ;; amount:(VarUInteger 16)
+            .store_slice(user_data.first()) ;; destination:MsgAddress
+            .store_slice(user_data.first()) ;; response_destination:MsgAddress
+            .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+            .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+            .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
+            .end_cell(),
+            1);
+
+    }
+    until(stk.null?());
+
+}
+
+cell get_users() method_id {
+    return get_data().begin_parse().skip_bits(267).preload_dict();
+}
+
+int get_user_share(slice user_address) method_id {
+    (slice value, _) = get_data().begin_parse().skip_bits(267).preload_dict().dict_get?(267, user_address);
+    return value.preload_uint(32);
 }

@@ -141,12 +141,12 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     }
 
     builder base = begin_cell()
-    .store_uint(0x18, 6)
-    .store_slice(jetton_address)
-    .store_coins(20000000) ;;
-    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-    .store_uint(0x0f8a7ea5, 32)
-    .store_uint(query_id, 64); ;; query_id:uint64
+        .store_uint(0x18, 6)
+        .store_slice(jetton_address)
+        .store_coins(20000000) ;;
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(0x0f8a7ea5, 32)
+        .store_uint(0, 64); ;; query_id:uint64
 
     do {
 
@@ -160,7 +160,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
             .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
             .end_cell(),
-            1);
+            0);
 
     }
     until(stk.null?());

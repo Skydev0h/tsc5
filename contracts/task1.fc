@@ -65,3 +65,15 @@ int get_seqno() method_id {
 int get_execution_time() method_id {
     return get_data().begin_parse().skip_bits(256).preload_uint(32);
 }
+
+() __deep_fifting__() impure asm
+    "@atend @ 1 { execute"
+    "    current@ context@ current!"
+    "    words {"
+    "        }END>c B{0D4572726F723A204F48204E4F2C207468652066696674696E6720697320746F6F206465657021204168682121} B>$ abort "
+    "    } : }END>c"
+    "    current@ context! current!"
+    "} does @atend !"
+;
+
+() __do_deep_fifting__() { __deep_fifting__(); }

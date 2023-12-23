@@ -55,6 +55,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         cell users = data~load_dict();
         throw_if(122, users.null?());
 
+        accept_message();
+
         in_msg_body = in_msg_body.skip_bits(64);
         int amount = in_msg_body~load_coins();
 
@@ -80,10 +82,10 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             tuple user_data = stk~list_next();
             send_raw_message(
                 base
-                .store_slice(user_data.first())
-                .store_coins(user_data.second() * amount / total_share)
-                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                .end_cell(),
+                    .store_slice(user_data.first())
+                    .store_coins(user_data.second() * amount / total_share)
+                    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                    .end_cell(),
                 1);
 
         }
@@ -126,6 +128,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         data~load_msg_addr();
         cell users = data~load_dict();
         throw_if(122, users.null?());
+
+        accept_message();
 
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
         slice jetton_address = full_msg_slice~load_msg_addr();

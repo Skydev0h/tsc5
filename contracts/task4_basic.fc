@@ -3,3 +3,11 @@
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
 
 }
+
+;; . X S E ? !
+
+;;-1  obs  len  maze
+(int, int, int, tuple) solve_maze(int n, int m, tuple maze) {
+    ;; int Sx = 0; int Sy = 0; int Ex = 0; int Ey = 0; int ?n = 0;
+    return (-1, 0, 0, null);
+}

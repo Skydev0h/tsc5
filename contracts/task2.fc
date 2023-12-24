@@ -3,6 +3,9 @@
 (slice, int) is_add_user_call   (slice body) impure asm "x{368ddef3} SDBEGINSQ";
 (slice, int) is_remove_user_call(slice body) impure asm "x{278205c8} SDBEGINSQ";
 (slice, int) is_split_call      (slice body) impure asm "x{068530b3} SDBEGINSQ";
+(slice, int) is_transfer_call   (slice body) impure asm "x{7362d09c} SDBEGINSQ";
+
+(slice, ()) is_split_call_or_ret(slice body) impure asm "x{068530b3} SDBEGINSQ" "IFNOTRET";
 (slice, ()) is_transfer_notification_call_or_ret(slice body) impure asm "x{7362d09c} SDBEGINSQ" "IFNOTRET";
 
 (slice, int) dict_get?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTGET" "NULLSWAPIFNOT";
@@ -70,8 +73,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     }
 
-    if (in_msg_body~is_split_call()) {
-
+    if (in_msg_body~is_transfer_call()) {
         slice data = get_data().begin_parse();
         data~load_msg_addr();
         cell users = data~load_dict();
@@ -79,8 +81,12 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         accept_message();
 
-        ;; in_msg_body = in_msg_body.skip_bits(64);
-        int amount = msg_value; ;; in_msg_body~load_coins();
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice jetton_address = full_msg_slice~load_msg_addr();
+
+        ;; int query_id = in_msg_body~load_uint(64);
+        in_msg_body = in_msg_body.skip_bits(64);
+        int amount = in_msg_body~load_coins();
 
         tuple stk = null();
         int total_share = 0;
@@ -97,7 +103,15 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         }
 
-        builder base = begin_cell().store_uint(0x18, 6);
+        builder base = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(jetton_address)
+        .store_coins(20000000) ;;
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+        builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
+        ;; .store_uint(0x0f8a7ea5, 32)
+        ;; .store_uint(0, 64); ;; query_id:uint64
 
         do {
 
@@ -105,22 +119,30 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
             send_raw_message(
-                base
-                .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                .store_slice(user_addr)
-                .store_coins(value)
-                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                base.store_ref(
+                    msg_base
+                    .store_coins(value)        ;; amount:(VarUInteger 16)
+                    .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                    .store_slice(user_addr)    ;; destination:MsgAddress
+                    .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                    .store_slice(user_addr)    ;; response_destination:MsgAddress
+                    .store_uint(514, 14)
+                    ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+                    ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+                    ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
+                    .end_cell())
                 .end_cell(),
                 1);
 
         }
-        until(stk.null?());
+        until (stk.null?());
 
         return ();
 
     }
 
-    in_msg_body~is_transfer_notification_call_or_ret();
+    ;; if (in_msg_body~is_split_call()) {
+    in_msg_body~is_split_call_or_ret();
 
     slice data = get_data().begin_parse();
     data~load_msg_addr();
@@ -129,12 +151,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     accept_message();
 
-    slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-    slice jetton_address = full_msg_slice~load_msg_addr();
-
-    ;; int query_id = in_msg_body~load_uint(64);
-    in_msg_body = in_msg_body.skip_bits(64);
-    int amount = in_msg_body~load_coins();
+    ;; in_msg_body = in_msg_body.skip_bits(64);
+    int amount = msg_value; ;; in_msg_body~load_coins();
 
     tuple stk = null();
     int total_share = 0;
@@ -151,15 +169,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     }
 
-    builder base = begin_cell()
-    .store_uint(0x18, 6)
-    .store_slice(jetton_address)
-    .store_coins(20000000) ;;
-    .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
-
-    builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
-    ;; .store_uint(0x0f8a7ea5, 32)
-    ;; .store_uint(0, 64); ;; query_id:uint64
+    builder base = begin_cell().store_uint(0x18, 6);
 
     do {
 
@@ -167,18 +177,11 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         (slice user_addr, int user_share) = unpair(user_data);
         int value = muldiv(user_share, amount, total_share);
         send_raw_message(
-            base.store_ref(
-                msg_base
-                .store_coins(value)        ;; amount:(VarUInteger 16)
-                .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                .store_slice(user_addr)    ;; destination:MsgAddress
-                .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                .store_slice(user_addr)    ;; response_destination:MsgAddress
-                .store_uint(514, 14)
-                ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
-                ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-                ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
-                .end_cell())
+            base
+            .store_uint(1024, 3 + 8) ;; 10 0 00000000
+            .store_slice(user_addr)
+            .store_coins(value)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell(),
             1);
 

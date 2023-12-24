@@ -13,15 +13,9 @@
 
 int equal_slices?(slice a, slice b) asm "SDEQ";
 
-;; LDUQ: s - x s' -1 or s 0 --IFNOTRET--> x s' or RET
-(int, slice) load_uint32_or_ret(slice s) impure asm "32 LDUQ" "IFNOTRET";
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-
-    (int op, in_msg_body) = in_msg_body.load_uint32_or_ret();
-
-    ;; if (in_msg_body~is_add_user_call()) {
-    if (op == 0x368ddef3) {
+     if (in_msg_body~is_add_user_call()) {
 
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
@@ -32,8 +26,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         throw_unless(120, equal_slices?(sender, admin_address));
 
-        in_msg_body = in_msg_body.skip_bits(64);
-        slice address = in_msg_body~load_msg_addr().skip_bits(3 + 8);
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body~load_bits(256);
         slice share = in_msg_body.preload_bits(32);
 
         users~dict_set(256, address, share);
@@ -41,14 +35,38 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         set_data(begin_cell()
             .store_slice(admin_address)
             .store_dict(users)
-            .end_cell());
+        .end_cell());
 
         return ();
 
     }
 
-    ;; if (in_msg_body~is_split_call()) {
-    if (op == 0x068530b3) {
+    if (in_msg_body~is_remove_user_call()) {
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data~load_dict();
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        throw_unless(120, equal_slices?(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body.preload_bits(256);
+
+        throw_unless(121, users~dict_delete?(256, address));
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+        .end_cell());
+
+        return ();
+
+    }
+
+    if (in_msg_body~is_split_call()) {
 
         slice data = get_data().begin_parse();
         data~load_msg_addr();
@@ -75,8 +93,6 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         }
 
-        throw_if(122, total_share == 0);
-
         builder base = begin_cell().store_uint(0x18, 6);
 
         do {
@@ -84,121 +100,86 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
-            if (value > 0) {
-                send_raw_message(
-                    base
-                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                        .store_slice(user_addr)
-                        .store_coins(value)
-                        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                        .end_cell(),
-                    1);
-            }
-
-        }
-        until(stk.null?());
-
-        return ();
-
-    }
-
-    ;; if (in_msg_body~is_remove_user_call()) {
-    if (op == 0x278205c8) {
-
-        slice data = get_data().begin_parse();
-        slice admin_address = data~load_msg_addr();
-        cell users = data~load_dict();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
-
-        throw_unless(120, equal_slices?(sender, admin_address));
-
-        in_msg_body = in_msg_body.skip_bits(64);
-        slice address = in_msg_body~load_msg_addr().skip_bits(3 + 8);
-
-        throw_unless(121, users~dict_delete?(256, address));
-
-        set_data(begin_cell()
-            .store_slice(admin_address)
-            .store_dict(users)
-            .end_cell());
-
-        return ();
-
-    }
-
-    ;; in_msg_body~is_transfer_notification_call_or_ret();
-    if (op == 0x7362d09c) {
-
-        slice data = get_data().begin_parse();
-        data~load_msg_addr();
-        cell users = data~load_dict();
-        throw_if(122, users.null?());
-
-        accept_message();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice jetton_address = full_msg_slice~load_msg_addr();
-
-        ;; int query_id = in_msg_body~load_uint(64);
-        in_msg_body = in_msg_body.skip_bits(64);
-        int amount = in_msg_body~load_coins();
-
-        tuple stk = null();
-        int total_share = 0;
-
-        (slice user_address, slice user_value, int ok) = users.dict_get_min?(256);
-
-        while (ok) {
-
-            int user_share = user_value.preload_uint(32);
-            total_share = total_share + user_share;
-            stk = cons(pair(user_address, user_share), stk);
-
-            (user_address, user_value, ok) = users.dict_get_next?(256, user_address);
-
-        }
-
-        throw_if(122, total_share == 0);
-
-        builder base = begin_cell()
-            .store_uint(0x18, 6)
-            .store_slice(jetton_address)
-            .store_coins(20000000) ;;
-            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
-
-        builder msg_base = begin_cell()
-            .store_uint(0x0f8a7ea5, 32)
-            .store_uint(0, 64); ;; query_id:uint64
-
-        do {
-
-            [slice, int] user_data = stk~list_next();
-            (slice user_addr, int user_share) = unpair(user_data);
-            int value = muldiv(user_share, amount, total_share);
-            if (value > 0) {
-                send_raw_message(
-                    base.store_ref(
-                        msg_base
-                        .store_coins(value)        ;; amount:(VarUInteger 16)
-                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                        .store_slice(user_addr)    ;; destination:MsgAddress
-                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                        .store_slice(user_addr)    ;; response_destination:MsgAddress
-                        .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
-                        .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-                        .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
-                        .end_cell())
+            send_raw_message(
+                base
+                    .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                    .store_slice(user_addr)
+                    .store_coins(value)
+                    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                     .end_cell(),
-                    1);
-            }
+                1);
 
         }
         until(stk.null?());
 
         return ();
+
     }
+
+    in_msg_body~is_transfer_notification_call_or_ret();
+
+    slice data = get_data().begin_parse();
+    data~load_msg_addr();
+    cell users = data~load_dict();
+    throw_if(122, users.null?());
+
+    accept_message();
+
+    slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+    slice jetton_address = full_msg_slice~load_msg_addr();
+
+    ;; int query_id = in_msg_body~load_uint(64);
+    in_msg_body = in_msg_body.skip_bits(64);
+    int amount = in_msg_body~load_coins();
+
+    tuple stk = null();
+    int total_share = 0;
+
+    (slice user_address, slice user_value, int ok) = users.dict_get_min?(256);
+
+    while (ok) {
+
+        int user_share = user_value.preload_uint(32);
+        total_share = total_share + user_share;
+        stk = cons(pair(user_address, user_share), stk);
+
+        (user_address, user_value, ok) = users.dict_get_next?(256, user_address);
+
+    }
+
+    builder base = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(jetton_address)
+        .store_coins(20000000) ;;
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+    builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
+        ;; .store_uint(0x0f8a7ea5, 32)
+        ;; .store_uint(0, 64); ;; query_id:uint64
+
+    do {
+
+        [slice, int] user_data = stk~list_next();
+        (slice user_addr, int user_share) = unpair(user_data);
+        int value = muldiv(user_share, amount, total_share);
+        send_raw_message(
+            base.store_ref(
+                msg_base
+                .store_coins(value)        ;; amount:(VarUInteger 16)
+                .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                .store_slice(user_addr)    ;; destination:MsgAddress
+                .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                .store_slice(user_addr)    ;; response_destination:MsgAddress
+                .store_uint(514, 14)
+                ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+                ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+                ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
+                .end_cell())
+            .end_cell(),
+            1);
+
+    }
+    until(stk.null?());
 
 }
 

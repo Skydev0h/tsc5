@@ -60,7 +60,7 @@ global int m';
 }
 
 ;;-1  obs  len  maze
-(int, int, int, tuple) solve_maze(int n, int m, tuple maze) method_id {
+(int, int, int, tuple) solve_maze(int m, int n, tuple maze) method_id {
     int Sx = 0; int Sy = 0; int n? = 0;
     n' = n - 1; m' = m - 1;
     int y = 0;

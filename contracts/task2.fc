@@ -22,64 +22,11 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     return_if(is_external);
 
-    if (in_msg_body~is_add_user_call()) {
-
-        slice data = get_data().begin_parse();
-        slice admin_address = data~load_msg_addr();
-        cell users = data~load_dict();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
-
-        throw_unless(120, equal_slices?(sender, admin_address));
-
-        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
-        slice address = in_msg_body~load_bits(256);
-        slice share = in_msg_body.preload_bits(32);
-
-        users~dict_set(256, address, share);
-
-        set_data(begin_cell()
-            .store_slice(admin_address)
-            .store_dict(users)
-        .end_cell());
-
-        return ();
-
-    }
-
-    if (in_msg_body~is_remove_user_call()) {
-
-        slice data = get_data().begin_parse();
-        slice admin_address = data~load_msg_addr();
-        cell users = data~load_dict();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
-
-        throw_unless(120, equal_slices?(sender, admin_address));
-
-        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
-        slice address = in_msg_body.preload_bits(256);
-
-        throw_unless(121, users~dict_delete?(256, address));
-
-        set_data(begin_cell()
-            .store_slice(admin_address)
-            .store_dict(users)
-        .end_cell());
-
-        return ();
-
-    }
-
     if (in_msg_body~is_transfer_call()) {
         slice data = get_data().begin_parse();
         data~load_msg_addr();
         cell users = data~load_dict();
         throw_if(122, users.null?());
-
-        accept_message();
 
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
         slice jetton_address = full_msg_slice~load_msg_addr();
@@ -141,6 +88,57 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     }
 
+    if (in_msg_body~is_add_user_call()) {
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data~load_dict();
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        throw_unless(120, equal_slices?(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body~load_bits(256);
+        slice share = in_msg_body.preload_bits(32);
+
+        users~dict_set(256, address, share);
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+        .end_cell());
+
+        return ();
+
+    }
+
+    if (in_msg_body~is_remove_user_call()) {
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data~load_dict();
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        throw_unless(120, equal_slices?(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body.preload_bits(256);
+
+        throw_unless(121, users~dict_delete?(256, address));
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+        .end_cell());
+
+        return ();
+
+    }
+
     ;; if (in_msg_body~is_split_call()) {
     in_msg_body~is_split_call_or_ret();
 
@@ -148,8 +146,6 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     data~load_msg_addr();
     cell users = data~load_dict();
     throw_if(122, users.null?());
-
-    accept_message();
 
     ;; in_msg_body = in_msg_body.skip_bits(64);
     int amount = msg_value; ;; in_msg_body~load_coins();

@@ -9,5 +9,5 @@
 ;;-1  obs  len  maze
 (int, int, int, tuple) solve_maze(int n, int m, tuple maze) {
     ;; int Sx = 0; int Sy = 0; int Ex = 0; int Ey = 0; int ?n = 0;
-    return (-1, 0, 0, null);
+    return (-1, 0, 0, null());
 }

@@ -81,38 +81,51 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
     m' = m' - 1;
     n' = n' - 1;
 
-    int 'len = 0x100000000;
+    int 'hier = 1 << 128;
+    int 'len = 'hier;
+    int 'obs = 'hier;
     tuple 'maze = null();
     tuple stk = null();
-    int 'obs = 'len;
     stk = cons([maze, Sx, Sy, 0, 0], stk);
+
+    tuple hm = empty_tuple();
+    tuple hr = empty_tuple();
+    repeat (n' + 1) { hr~tpush('hier); }
+    repeat (m' + 1) { hm~tpush(hr); }
 
     do {
 
         [tuple, int, int, int, int] next = stk~list_next();
         (tuple mz, int x, int y, int ob, int le) = untuple5(next);
         if (le != 0) { mz~tset(mz.tget(y).tset("!"u, x), y); }
+        int hier = (le + 1) | (ob << 32);
+        hm~tset(hm.tget(y).tset(hier, x), y);
         int y' = y - 1;
         repeat(3) {
             if ((y' >= 0) & (y' <= m')) {
                 tuple t = mz.at(y');
+                tuple h = hm.at(y');
                 int x' = x - 1;
                 repeat(3) {
                     if ((x' >= 0) & (x' <= n')) {
                         int c' = t.at(x');
-                        ;; ~dump([x', y', c']);
-                        if (c' == "."u) {
-                            stk = cons([mz, x', y', ob, le + 1], stk);
-                        }
-                        elseif (c' == "?"u) {
-                            stk = cons([mz, x', y', ob + 1, le + 1], stk);
-                        }
-                        elseif (c' == "E"u) {
-                            ;; ~dump([s, maze]);
-                            if ((ob < 'obs) | ((ob == 'obs) & (le + 1 < 'len))) {
-                                'len = le + 1;
-                                'obs = ob;
-                                'maze = mz;
+                        int h' = h.at(x');
+                        if (hier < h') {
+                            ;; ~dump([x', y', c']);
+                            if (c' == "."u) {
+                                stk = cons([mz, x', y', ob, le + 1], stk);
+                            }
+                            elseif (c' == "?"u) {
+                                stk = cons([mz, x', y', ob + 1, le + 1], stk);
+                            }
+                            elseif (c' == "E"u) {
+                                ;; ~dump([s, maze]);
+                                if (hier < 'hier) {
+                                    'hier = hier;
+                                    'len = le + 1;
+                                    'obs = ob;
+                                    'maze = mz;
+                                }
                             }
                         }
                         if (le >= 'len) {

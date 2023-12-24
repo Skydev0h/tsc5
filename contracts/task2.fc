@@ -83,13 +83,16 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
-            send_raw_message(
-                base
-                    .store_slice(user_addr)
-                    .store_coins(muldiv(user_share, amount, total_share))
-                    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                    .end_cell(),
-                1);
+            int value = muldiv(user_share, amount, total_share);
+            if (value > 0) {
+                send_raw_message(
+                    base
+                        .store_slice(user_addr)
+                        .store_coins(value)
+                        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                        .end_cell(),
+                    1);
+            }
 
         }
         until(stk.null?());
@@ -172,18 +175,21 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
-            send_raw_message(
-                base.store_ref(
-                    msg_base
-                        .store_coins(muldiv(user_share, amount, total_share)) ;; amount:(VarUInteger 16)
-                        .store_slice(user_addr) ;; destination:MsgAddress
-                        .store_slice(user_addr) ;; response_destination:MsgAddress
+            int value = muldiv(user_share, amount, total_share);
+            if (value > 0) {
+                send_raw_message(
+                    base.store_ref(
+                        msg_base
+                        .store_coins(value)        ;; amount:(VarUInteger 16)
+                        .store_slice(user_addr)    ;; destination:MsgAddress
+                        .store_slice(user_addr)    ;; response_destination:MsgAddress
                         .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
                         .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-                        .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
-                    .end_cell())
-                .end_cell(),
-                1);
+                        .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
+                        .end_cell())
+                    .end_cell(),
+                    1);
+            }
 
         }
         until(stk.null?());
@@ -198,9 +204,9 @@ cell get_users() method_id {
 }
 
 int get_user_share(slice user_address) method_id {
-    cell dict = get_data().begin_parse().skip_bits(267).preload_dict();
-    if (dict.null?()) { return 0; }
-    (slice value, int success) = dict.dict_get?(267, user_address);
+    cell users = get_data().begin_parse().skip_bits(267).preload_dict();
+    if (users.null?()) { return 0; }
+    (slice value, int success) = users.dict_get?(267, user_address);
     ifnot (success) { return 0; }
     return value.preload_uint(32);
 }

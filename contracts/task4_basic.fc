@@ -59,14 +59,17 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
 
 ;;-1  obs  len  maze
 (int, int, int, tuple) solve_maze(int n, int m, tuple maze) method_id {
+
+    accept_message();
+
     int Sx = 0; int Sy = 0; int n? = 0;
-    int n' = maze.tget(0).tlen() - 1;
-    int m' = maze.tlen() - 1;
+    int n' = maze.tget(0).tlen();
+    int m' = maze.tlen();
     int y = 0;
-    repeat (m) {
+    repeat (m') {
         tuple t = maze.at(y);
         int x = 0;
-        repeat (n) {
+        repeat (n') {
             int c = t.at(x);
             if (c == "S"u) { Sx = x; Sy = y; }
             if (c == "?"u) { n? += 1; }
@@ -74,6 +77,9 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
         }
         y += 1;
     }
+
+    m' = m' - 1;
+    n' = n' - 1;
 
     int 'len = 0x100000000;
     tuple 'maze = null();

@@ -12,14 +12,11 @@ forall X -> (tuple, X) tpop(tuple t) asm "TPOP";
 forall X -> tuple tset(tuple t, X value, int index) asm "SETINDEXVAR";
 forall X -> (tuple, ()) ~tset(tuple t, X value, int index) asm "SETINDEXVAR";
 
-global int 'len;
-global tuple 'maze;
-
-global int n';
-global int m';
+forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUPLE";
 
 ;; . X S E ? !
 
+{-
 () walker(tuple maze, int x, int y, int a, int s) impure inline_ref {
     ;; int c = maze.at(y).at(x);
     ;; ~dump([x, y, a, s, c]);
@@ -58,11 +55,13 @@ global int m';
         y' += 1;
     }
 }
+-}
 
 ;;-1  obs  len  maze
-(int, int, int, tuple) solve_maze(int m, int n, tuple maze) method_id {
+(int, int, int, tuple) solve_maze(int n, int m, tuple maze) method_id {
     int Sx = 0; int Sy = 0; int n? = 0;
-    n' = n - 1; m' = m - 1;
+    int n' = maze.tget(0).tlen() - 1;
+    int m' = maze.tlen() - 1;
     int y = 0;
     repeat (m) {
         tuple t = maze.at(y);
@@ -77,9 +76,51 @@ global int m';
     }
     int a? = 0;
     repeat (n? + 1) {
-        'len = 0x100000000;
-        'maze = null();
-        walker(maze, Sx, Sy, a?, 0);
+        int 'len = 0x100000000;
+        tuple 'maze = null();
+        tuple stk = null();
+        stk = cons([maze, Sx, Sy, a?, 0], stk);
+        do {
+
+            [tuple, int, int, int, int] next = stk~list_next();
+            (tuple mz, int x, int y, int av, int le) = untuple5(next);
+            if (le != 0) { mz~tset(mz.tget(y).tset("!"u, x), y); }
+            int y' = y - 1;
+            repeat(3) {
+                if ((y' >= 0) & (y' <= m')) {
+                    tuple t = mz.at(y');
+                    int x' = x - 1;
+                    repeat(3) {
+                        if ((x' >= 0) & (x' <= n')) {
+                            int c' = t.at(x');
+                            ;; ~dump([x', y', c']);
+                            if (c' == "."u) {
+                                stk = cons([mz, x', y', av, le + 1], stk);
+                            }
+                            elseif (c' == "?"u) {
+                                if (av != 0) {
+                                    stk = cons([mz, x', y', av - 1, le + 1], stk);
+                                }
+                            }
+                            elseif (c' == "E"u) {
+                                ;; ~dump([s, maze]);
+                                if (le + 1 < 'len) {
+                                    'len = le + 1;
+                                    'maze = mz;
+                                }
+                            }
+                            if (le >= 'len) {
+                                x' = 256;
+                                y' = 256;
+                            }
+                        }
+                        x' += 1;
+                    }
+                }
+                y' += 1;
+            }
+
+        } until(stk.null?());
         ~dump([a?, 'len, 'maze]);
         ifnot ('maze.null?()) {
             return (-1, a?, 'len, 'maze);

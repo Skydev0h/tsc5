@@ -13,9 +13,13 @@
 
 int equal_slices?(slice a, slice b) asm "SDEQ";
 
-() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
+() return_if(int cond) impure asm "IFRET";
 
-     if (in_msg_body~is_add_user_call()) {
+() main(int msg_value, cell in_msg_full, slice in_msg_body, int is_external) impure {
+
+    return_if(is_external);
+
+    if (in_msg_body~is_add_user_call()) {
 
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
@@ -194,3 +198,26 @@ int get_user_share(slice user_address) method_id {
     ifnot (success) { return 0; }
     return value.preload_uint(32);
 }
+
+() __deep_fifting__() impure asm
+    "@atend @ 1 { execute"
+    "    current@ context@ current!"
+    "    {"
+    "        }END> b>"
+    "        <b"
+    "        SETCP0 DUP BITSIZE 1 RSHIFT#"
+    "        IFNOTJMP:<{"
+    "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+    "        }>"
+    "        swap <s ref@"
+    "         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
+    "        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
+    "        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
+    "        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
+    "        b>"
+    "    } : }END>c"
+    "    current@ context! current!"
+    "} does @atend !"
+;
+
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

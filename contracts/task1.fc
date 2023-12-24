@@ -6,6 +6,8 @@
 (slice, ()) is_update_call_or_ret(slice body) impure asm "x{9df10277} SDBEGINSQ" "IFNOTRET";
 (slice, ()) is_claim_call_or_ret(slice body) impure asm "x{bb4be234} SDBEGINSQ" "IFNOTRET";
 
+() return_if_not(int cond) impure asm "IFNOTRET";
+
 () claim_sub() impure inline_ref {
 
     slice data = get_data().begin_parse().skip_bits(256);
@@ -24,6 +26,8 @@
 }
 
 () main(slice body, int is_external) {
+
+    return_if_not(is_external);
 
     if (body~is_update_call()) {
 

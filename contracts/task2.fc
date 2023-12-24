@@ -84,7 +84,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
-            if (value > 0) {
+            ;; if (value > 0) {
                 send_raw_message(
                     base
                         .store_slice(user_addr)
@@ -92,7 +92,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                         .end_cell(),
                     1);
-            }
+            ;; }
 
         }
         until(stk.null?());
@@ -140,8 +140,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
         slice jetton_address = full_msg_slice~load_msg_addr();
 
-        ;; int query_id = in_msg_body~load_uint(64);
-        in_msg_body = in_msg_body.skip_bits(64);
+        int query_id = in_msg_body~load_uint(64);
+        ;; in_msg_body = in_msg_body.skip_bits(64);
         int amount = in_msg_body~load_coins();
 
         tuple stk = null();
@@ -169,14 +169,14 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         builder msg_base = begin_cell()
             .store_uint(0x0f8a7ea5, 32)
-            .store_uint(0, 64); ;; query_id:uint64
+            .store_uint(query_id, 64); ;; query_id:uint64
 
         do {
 
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
-            if (value > 0) {
+            ;; if (value > 0) {
                 send_raw_message(
                     base.store_ref(
                         msg_base
@@ -189,7 +189,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         .end_cell())
                     .end_cell(),
                     1);
-            }
+            ;; }
 
         }
         until(stk.null?());

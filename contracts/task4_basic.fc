@@ -74,58 +74,57 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
         }
         y += 1;
     }
-    int a? = 0;
-    repeat (n? + 1) {
-        int 'len = 0x100000000;
-        tuple 'maze = null();
-        tuple stk = null();
-        stk = cons([maze, Sx, Sy, a?, 0], stk);
-        do {
 
-            [tuple, int, int, int, int] next = stk~list_next();
-            (tuple mz, int x, int y, int av, int le) = untuple5(next);
-            if (le != 0) { mz~tset(mz.tget(y).tset("!"u, x), y); }
-            int y' = y - 1;
-            repeat(3) {
-                if ((y' >= 0) & (y' <= m')) {
-                    tuple t = mz.at(y');
-                    int x' = x - 1;
-                    repeat(3) {
-                        if ((x' >= 0) & (x' <= n')) {
-                            int c' = t.at(x');
-                            ;; ~dump([x', y', c']);
-                            if (c' == "."u) {
-                                stk = cons([mz, x', y', av, le + 1], stk);
-                            }
-                            elseif (c' == "?"u) {
-                                if (av != 0) {
-                                    stk = cons([mz, x', y', av - 1, le + 1], stk);
-                                }
-                            }
-                            elseif (c' == "E"u) {
-                                ;; ~dump([s, maze]);
-                                if (le + 1 < 'len) {
-                                    'len = le + 1;
-                                    'maze = mz;
-                                }
-                            }
-                            if (le >= 'len) {
-                                x' = 256;
-                                y' = 256;
+    int 'len = 0x100000000;
+    tuple 'maze = null();
+    tuple stk = null();
+    int 'obs = 'len;
+    stk = cons([maze, Sx, Sy, 0, 0], stk);
+
+    do {
+
+        [tuple, int, int, int, int] next = stk~list_next();
+        (tuple mz, int x, int y, int ob, int le) = untuple5(next);
+        if (le != 0) { mz~tset(mz.tget(y).tset("!"u, x), y); }
+        int y' = y - 1;
+        repeat(3) {
+            if ((y' >= 0) & (y' <= m')) {
+                tuple t = mz.at(y');
+                int x' = x - 1;
+                repeat(3) {
+                    if ((x' >= 0) & (x' <= n')) {
+                        int c' = t.at(x');
+                        ;; ~dump([x', y', c']);
+                        if (c' == "."u) {
+                            stk = cons([mz, x', y', ob, le + 1], stk);
+                        }
+                        elseif (c' == "?"u) {
+                            stk = cons([mz, x', y', ob + 1, le + 1], stk);
+                        }
+                        elseif (c' == "E"u) {
+                            ;; ~dump([s, maze]);
+                            if ((ob < 'obs) | ((ob == 'obs) & (le + 1 < 'len))) {
+                                'len = le + 1;
+                                'obs = ob;
+                                'maze = mz;
                             }
                         }
-                        x' += 1;
+                        if (le >= 'len) {
+                            x' = 256;
+                            y' = 256;
+                        }
                     }
+                    x' += 1;
                 }
-                y' += 1;
             }
-
-        } until(stk.null?());
-        ~dump([a?, 'len, 'maze]);
-        ifnot ('maze.null?()) {
-            return (-1, a?, 'len, 'maze);
+            y' += 1;
         }
-        a? = a? + 1;
+
+    } until(stk.null?());
+
+    ifnot ('maze.null?()) {
+        return (-1, 'obs, 'len, 'maze);
     }
+
     return (-1, 0, 0, null());
 }

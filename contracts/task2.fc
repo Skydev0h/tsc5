@@ -183,7 +183,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
                     .end_cell())
                 .end_cell(),
-                0);
+                1);
 
         }
         until(stk.null?());

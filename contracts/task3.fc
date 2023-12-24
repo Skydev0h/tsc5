@@ -57,6 +57,12 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
 
 () recv_internal(int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
     int expected_version = in_msg_body~load_uint(32);
+
+    if (expected_version == 0) {
+        set_data(wrap_storage(1, get_data().begin_parse().preload_ref()));
+        return();
+    }
+
     cell expected_code = in_msg_body~load_maybe_ref();
     cell migrations = in_msg_body~load_dict();
     cell payload = in_msg_body~load_ref();
@@ -69,13 +75,6 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
     ;; here you should check if it's the first call or not based on `expected_version` as stated in the task
     ;; if it is the first call, wrap the storage and finish execution by returning from the function
     ;; ---
-
-    if (expected_version == 0) {
-        set_data(wrap_storage(1, get_data().begin_parse().preload_ref()));
-        return();
-    }
-
-
 
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
 

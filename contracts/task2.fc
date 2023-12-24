@@ -75,15 +75,18 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         }
 
+        throw_if(122, total_share == 0);
+
         builder base = begin_cell().store_uint(0x18, 6);
 
         do {
 
-            tuple user_data = stk~list_next();
+            [slice, int] user_data = stk~list_next();
+            (slice user_addr, int user_share) = unpair(user_data);
             send_raw_message(
                 base
-                    .store_slice(user_data.first())
-                    .store_coins(muldiv(user_data.second(), amount, total_share))
+                    .store_slice(user_addr)
+                    .store_coins(muldiv(user_share, amount, total_share))
                     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                     .end_cell(),
                 1);
@@ -153,25 +156,32 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         }
 
+        throw_if(122, total_share == 0);
+
         builder base = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(jetton_address)
             .store_coins(20000000) ;;
-            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+        builder msg_base = begin_cell()
             .store_uint(0x0f8a7ea5, 32)
             .store_uint(0, 64); ;; query_id:uint64
 
         do {
 
-            tuple user_data = stk~list_next();
+            [slice, int] user_data = stk~list_next();
+            (slice user_addr, int user_share) = unpair(user_data);
             send_raw_message(
-                base
-                    .store_coins(muldiv(user_data.second(), amount, total_share)) ;; amount:(VarUInteger 16)
-                    .store_slice(user_data.first()) ;; destination:MsgAddress
-                    .store_slice(user_data.first()) ;; response_destination:MsgAddress
-                    .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
-                    .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-                    .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
+                base.store_ref(
+                    msg_base
+                        .store_coins(muldiv(user_share, amount, total_share)) ;; amount:(VarUInteger 16)
+                        .store_slice(user_addr) ;; destination:MsgAddress
+                        .store_slice(user_addr) ;; response_destination:MsgAddress
+                        .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+                        .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+                        .store_dict(null())        ;; forward_payload:(Either Cell ^Cell)
+                    .end_cell())
                 .end_cell(),
                 0);
 

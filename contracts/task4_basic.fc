@@ -58,7 +58,7 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
 -}
 
 ;;-1  obs  len  maze
-(int, int, int, tuple) solve_maze(int n, int m, tuple maze) method_id {
+(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
 
     accept_message();
 

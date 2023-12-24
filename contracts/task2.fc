@@ -33,10 +33,10 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         throw_unless(120, equal_slices?(sender, admin_address));
 
         in_msg_body = in_msg_body.skip_bits(64);
-        slice address = in_msg_body~load_msg_addr();
+        slice address = in_msg_body~load_msg_addr().skip_bits(3 + 8);
         slice share = in_msg_body.preload_bits(32);
 
-        users~dict_set(267, address, share);
+        users~dict_set(256, address, share);
 
         set_data(begin_cell()
             .store_slice(admin_address)
@@ -63,7 +63,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         tuple stk = null();
         int total_share = 0;
 
-        (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
+        (slice user_address, slice user_value, int ok) = users.dict_get_min?(256);
 
         while (ok) {
 
@@ -71,7 +71,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             total_share = total_share + user_share;
             stk = cons(pair(user_address, user_share), stk);
 
-            (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
+            (user_address, user_value, ok) = users.dict_get_next?(256, user_address);
 
         }
 
@@ -87,6 +87,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             ;; if (value > 0) {
                 send_raw_message(
                     base
+                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
                         .store_slice(user_addr)
                         .store_coins(value)
                         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
@@ -114,9 +115,9 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         throw_unless(120, equal_slices?(sender, admin_address));
 
         in_msg_body = in_msg_body.skip_bits(64);
-        slice address = in_msg_body~load_msg_addr();
+        slice address = in_msg_body~load_msg_addr().skip_bits(3 + 8);
 
-        throw_unless(121, users~dict_delete?(267, address));
+        throw_unless(121, users~dict_delete?(256, address));
 
         set_data(begin_cell()
             .store_slice(admin_address)
@@ -147,7 +148,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         tuple stk = null();
         int total_share = 0;
 
-        (slice user_address, slice user_value, int ok) = users.dict_get_min?(267);
+        (slice user_address, slice user_value, int ok) = users.dict_get_min?(256);
 
         while (ok) {
 
@@ -155,7 +156,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             total_share = total_share + user_share;
             stk = cons(pair(user_address, user_share), stk);
 
-            (user_address, user_value, ok) = users.dict_get_next?(267, user_address);
+            (user_address, user_value, ok) = users.dict_get_next?(256, user_address);
 
         }
 
@@ -181,7 +182,9 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                     base.store_ref(
                         msg_base
                         .store_coins(value)        ;; amount:(VarUInteger 16)
+                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
                         .store_slice(user_addr)    ;; destination:MsgAddress
+                        .store_uint(1024, 3 + 8) ;; 10 0 00000000
                         .store_slice(user_addr)    ;; response_destination:MsgAddress
                         .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
                         .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
@@ -206,7 +209,7 @@ cell get_users() method_id {
 int get_user_share(slice user_address) method_id {
     cell users = get_data().begin_parse().skip_bits(267).preload_dict();
     if (users.null?()) { return 0; }
-    (slice value, int success) = users.dict_get?(267, user_address);
+    (slice value, int success) = users.dict_get?(256, user_address.skip_bits(3 + 8));
     ifnot (success) { return 0; }
     return value.preload_uint(32);
 }

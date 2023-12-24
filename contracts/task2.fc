@@ -84,7 +84,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
-            ;; if (value > 0) {
+            if (value > 0) {
                 send_raw_message(
                     base
                         .store_uint(1024, 3 + 8) ;; 10 0 00000000
@@ -93,7 +93,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
                         .end_cell(),
                     1);
-            ;; }
+            }
 
         }
         until(stk.null?());
@@ -177,7 +177,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             [slice, int] user_data = stk~list_next();
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
-            ;; if (value > 0) {
+            if (value > 0) {
                 send_raw_message(
                     base.store_ref(
                         msg_base
@@ -192,7 +192,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         .end_cell())
                     .end_cell(),
                     1);
-            ;; }
+            }
 
         }
         until(stk.null?());

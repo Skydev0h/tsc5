@@ -78,6 +78,8 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
         y += 1;
     }
 
+    int 'hier = 1 << 128;
+
     tuple hm = empty_tuple();
     tuple hr = empty_tuple();
     repeat (n') { hr~tpush('hier); }
@@ -86,13 +88,12 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
     m' = m' - 1;
     n' = n' - 1;
 
-    int 'hier = 1 << 128;
     int 'len = 'hier;
     int 'obs = 'hier;
     tuple 'maze = null();
     tuple stk = null();
     ;; tuple nstk = null();
-    stk = cons([maze, Sx, Sy, 0, 0, 0, 0], stk);
+    stk = cons([maze, Sx, Sy, 0, 0], stk);
 
     {-
     do {
@@ -102,8 +103,8 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
     -}
 
         do {
-            [tuple, int, int, int, int, int, int] next = stk~list_next();
-            (tuple mz, int x, int y, int dx, int dy, int ob, int le) = untuple5(next);
+            [tuple, int, int, int, int] next = stk~list_next();
+            (tuple mz, int x, int y, int ob, int le) = untuple5(next);
             if (le != 0) {
                 mz~tset(mz.tget(y).tset("!"u, x), y);
             }

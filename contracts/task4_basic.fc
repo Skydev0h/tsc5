@@ -64,8 +64,8 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
     accept_message();
 
     int Sx = 0; int Sy = 0;
-    int n' = n; ;;maze.tget(0).tlen();
-    int m' = m; ;;maze.tlen();
+    int n' = m; ;;maze.tget(0).tlen();
+    int m' = n; ;;maze.tlen();
     int y = 0;
     repeat (m') {
         tuple t = maze.at(y);

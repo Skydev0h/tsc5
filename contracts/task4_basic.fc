@@ -13,6 +13,7 @@ forall X -> tuple tset(tuple t, X value, int index) asm "SETINDEXVAR";
 forall X -> (tuple, ()) ~tset(tuple t, X value, int index) asm "SETINDEXVAR";
 
 forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUPLE";
+forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, T2, T3, T4, T5, T6, T7] t) asm "7 UNTUPLE";
 
 ;; . X S E ? !
 
@@ -62,9 +63,9 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
 
     accept_message();
 
-    int Sx = 0; int Sy = 0; int n? = 0;
-    int n' = maze.tget(0).tlen();
-    int m' = maze.tlen();
+    int Sx = 0; int Sy = 0;
+    int n' = n; ;;maze.tget(0).tlen();
+    int m' = m; ;;maze.tlen();
     int y = 0;
     repeat (m') {
         tuple t = maze.at(y);
@@ -72,11 +73,15 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
         repeat (n') {
             int c = t.at(x);
             if (c == "S"u) { Sx = x; Sy = y; }
-            if (c == "?"u) { n? += 1; }
             x += 1;
         }
         y += 1;
     }
+
+    tuple hm = empty_tuple();
+    tuple hr = empty_tuple();
+    repeat (n') { hr~tpush('hier); }
+    repeat (m') { hm~tpush(hr); }
 
     m' = m' - 1;
     n' = n' - 1;
@@ -86,22 +91,19 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
     int 'obs = 'hier;
     tuple 'maze = null();
     tuple stk = null();
-    tuple nstk = null();
-    nstk = cons([maze, Sx, Sy, 0, 0], stk);
+    ;; tuple nstk = null();
+    stk = cons([maze, Sx, Sy, 0, 0, 0, 0], stk);
 
-    tuple hm = empty_tuple();
-    tuple hr = empty_tuple();
-    repeat (n' + 1) { hr~tpush('hier); }
-    repeat (m' + 1) { hm~tpush(hr); }
-
+    {-
     do {
 
         stk = nstk;
         nstk = null();
+    -}
 
         do {
-            [tuple, int, int, int, int] next = stk~list_next();
-            (tuple mz, int x, int y, int ob, int le) = untuple5(next);
+            [tuple, int, int, int, int, int, int] next = stk~list_next();
+            (tuple mz, int x, int y, int dx, int dy, int ob, int le) = untuple5(next);
             if (le != 0) {
                 mz~tset(mz.tget(y).tset("!"u, x), y);
             }
@@ -120,10 +122,10 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
                             if (hier < h') {
                                 ;; ~dump([x', y', c']);
                                 if (c' == "."u) {
-                                    nstk = cons([mz, x', y', ob, le + 1], nstk);
+                                    stk = cons([mz, x', y', ob, le + 1], stk);
                                 }
                                 elseif (c' == "?"u) {
-                                    nstk = cons([mz, x', y', ob + 1, le + 1], nstk);
+                                    stk = cons([mz, x', y', ob + 1, le + 1], stk);
                                 }
                                 elseif (c' == "E"u) {
                                     ;; ~dump([s, maze]);
@@ -148,7 +150,7 @@ forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUP
 
         } until (stk.null?());
 
-    } until (nstk.null?());
+    ;; } until (nstk.null?());
 
     ifnot ('maze.null?()) {
         return (-1, 'obs, 'len, 'maze);

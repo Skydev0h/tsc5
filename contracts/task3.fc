@@ -83,6 +83,8 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
         set_c3(expected_code.begin_parse().bless());
     }
 
+    commit();
+
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
 
     set_data(begin_cell()

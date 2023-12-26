@@ -51,7 +51,7 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
 ;; Custom version-specific code ends >>>>>
 
 () recv_internal(int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_empty?()) { return(); }
+    if (in_msg_body.slice_bits() < 32) { return(); }
     int expected_version = in_msg_body~load_uint(32);
 
     ;; ---
@@ -60,7 +60,11 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
     ;; ---
 
     if (expected_version == 0) {
-        set_data(wrap_storage(1, get_data().begin_parse().preload_ref()));
+        set_data(begin_cell()
+            .store_uint(1, 32)
+            .store_ref(get_data())
+            .end_cell()
+        );
         return();
     }
 

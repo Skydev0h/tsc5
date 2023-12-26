@@ -58,6 +58,7 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
 }
 -}
 
+{-
 ;;-1  obs  len  maze
 (int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
 
@@ -159,3 +160,4 @@ forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, 
 
     return (-1, 0, 0, null());
 }
+-}

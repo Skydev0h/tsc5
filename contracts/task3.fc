@@ -38,7 +38,7 @@ cell migrate_one(cell old_storage) { return old_storage; }
 ;;        if (expected_code.null?()) {
 ;;            if (migrations.dict_empty?()) {
                 set_data(begin_cell()
-                    .store_uint(0, 32)
+                    .store_uint(1, 32)
                     .store_ref(get_data())
                     .end_cell()
                 );
@@ -77,6 +77,8 @@ cell migrate_one(cell old_storage) { return old_storage; }
         );
         commit();
         -}
+    } else {
+        throw_unless(200, expected_code.null?());
     }
 
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());

@@ -1,9 +1,5 @@
 #include "imports/stdlib.fc";
 
-() main() { }
-
-int tlen(tuple list) asm "TLEN";
-
 forall X -> tuple t:+(tuple t, X value) asm "TPUSH";
 forall X -> (tuple, ()) ~t:+(tuple t, X value) asm "TPUSH";
 forall X -> (tuple, X) t:-(tuple t) asm "TPOP";
@@ -68,7 +64,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 }
 
 ;; (int, int, int, tuple, tuple) solve(int n, int m, tuple maze) method_id {
-(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
+(int, int, int, tuple) main(int n, int m, tuple maze) {
     int ly = n; int lx = m;
     ;; ###########################################################
     tuple tile_prices = empty_tuple();
@@ -273,3 +269,19 @@ const int    infinity_price = (1 << infinity_shift) - 1;
     return (strong, weak, dist, sol);
     ;; return (strong, weak, dist, sol, atp);
 }
+
+() __deep_fifting__() impure asm
+"@atend @ 1 { execute"
+"    current@ context@ current!"
+"    {"
+"        }END> b>"
+"        <{"
+"        SETCP0 IFNOTRET"
+"        swap <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+"        }> b>"
+"    } : }END>c"
+"    current@ context! current!"
+"} does @atend !"
+;
+
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

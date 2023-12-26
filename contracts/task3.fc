@@ -20,7 +20,9 @@ int version() method_id {
 ;; <<<<< Custom version-specific code begins
 
 cell process_message(cell storage, int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
-    return storage;
+    slice cs = storage.begin_parse();
+    int current_amount = cs.preload_uint(32);
+    return begin_cell().store_uint(current_amount + 1, 32).end_cell();
 }
 
 cell migrate_one(cell old_storage) { return old_storage; }
@@ -38,7 +40,7 @@ cell migrate_one(cell old_storage) { return old_storage; }
 ;;        if (expected_code.null?()) {
 ;;            if (migrations.dict_empty?()) {
         set_data(wrap_storage(1, get_data()));
-        ;; return ();
+        return ();
  ;;           }
  ;;       }
     }
@@ -48,13 +50,16 @@ cell migrate_one(cell old_storage) { return old_storage; }
     cell storage = ds.preload_ref();
 
     if (expected_version != version) {
-        throw_if(200, expected_code.null?());
 
         while (version != expected_version) {
-            (slice mig, int found) = migrations.udict_get?(32, version);
+            ;; ~dump([version, expected_version]);
+            (cell mig_c, int found) = migrations.udict_get_ref?(32, version);
             throw_unless(400, found);
+            ;; mig~dump();
+            slice mig = mig_c.begin_parse();
             int next = mig~load_uint(32);
             cell mc = mig.preload_maybe_ref();
+            ;; ~dump([next, mc]);
             ifnot (mc.null?()) {
                 set_c3(mc.begin_parse().bless());
                 storage = migrate_one(storage);
@@ -63,6 +68,7 @@ cell migrate_one(cell old_storage) { return old_storage; }
             version = next;
         }
 
+        throw_if(200, expected_code.null?());
         set_c3(expected_code.begin_parse().bless());
         set_code(expected_code);
         {-

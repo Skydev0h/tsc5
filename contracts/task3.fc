@@ -37,12 +37,8 @@ cell migrate_one(cell old_storage) { return old_storage; }
     if (expected_version == 0) {
 ;;        if (expected_code.null?()) {
 ;;            if (migrations.dict_empty?()) {
-                set_data(begin_cell()
-                    .store_uint(1, 32)
-                    .store_ref(get_data())
-                    .end_cell()
-                );
-                return ();
+        set_data(wrap_storage(1, get_data()));
+        ;; return ();
  ;;           }
  ;;       }
     }
@@ -68,7 +64,7 @@ cell migrate_one(cell old_storage) { return old_storage; }
         }
 
         set_c3(expected_code.begin_parse().bless());
-        ;; set_code(expected_code);
+        set_code(expected_code);
         {-
         set_data(begin_cell()
             .store_uint(version, 32)
@@ -81,9 +77,5 @@ cell migrate_one(cell old_storage) { return old_storage; }
 
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
 
-    set_data(begin_cell()
-        .store_uint(version, 32)
-        .store_ref(storage)
-        .end_cell()
-    );
+    set_data(wrap_storage(version, storage));
 }

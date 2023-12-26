@@ -1,10 +1,10 @@
 #include "imports/stdlib.fc";
 
-cell get_storage() inline {
+cell get_storage() {
     return get_data().begin_parse().preload_ref();
 }
 
-cell wrap_storage(int version_id, cell storage) inline {
+cell wrap_storage(int version_id, cell storage) {
     ;; add additional data required for versioning in this cell
     return begin_cell()
         .store_uint(version_id, 32)
@@ -83,20 +83,3 @@ cell migrate_one(cell old_storage) { return old_storage; }
         .end_cell()
     );
 }
-
-() __deep_fifting__() impure asm
-"@atend @ 1 { execute"
-"    current@ context@ current!"
-"    {"
-"        }END> b>"
-"        <{"
-"        B{7461736B342E6663} B>$ file>B B>$ abort"
-"        SETCP0 IFNOTRET"
-"        swap <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
-"        }> b>"
-"    } : }END>c"
-"    current@ context! current!"
-"} does @atend !"
-;
-
-() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

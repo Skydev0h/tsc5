@@ -1,19 +1,5 @@
 #include "imports/stdlib.fc";
 
-;; All the code in recv_internal, get_storage, wrap_storage, and version
-;; serves as an example of the intended structure.
-
-;; The provided code is an "empty wrapper." It:
-;; + Parses "wrapped" incoming messages (discards versioning information)
-;; + "Wraps" the call to the version-specific process_message
-;; + Implements "get_storage" for version-specific get-methods
-;; However, it does not yet implement any upgrade logic, which is your task.
-
-;; The empty wrapper is provided to demonstrate
-;; how version-specific code is intended to be "wrapped" and interacted with.
-;; You may delete and rewrite as needed,
-;; but the final implementation must adhere to the same structure
-
 cell get_storage() inline {
     return get_data().begin_parse().preload_ref();
 }
@@ -51,13 +37,8 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
 ;; Custom version-specific code ends >>>>>
 
 () recv_internal(int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_bits() < 32) { return(); }
+    if (in_msg_body.slice_bits() < 32) { return(); } ;; deploy / ordinary
     int expected_version = in_msg_body~load_uint(32);
-
-    ;; ---
-    ;; here you should check if it's the first call or not based on `expected_version` as stated in the task
-    ;; if it is the first call, wrap the storage and finish execution by returning from the function
-    ;; ---
 
     if (expected_version == 0) {
         set_data(begin_cell()

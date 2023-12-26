@@ -14,16 +14,9 @@
 ;; You may delete and rewrite as needed,
 ;; but the final implementation must adhere to the same structure
 
-{-
 cell get_storage() inline {
-    slice cs = get_data().begin_parse();
-
-    ;; Logic to extract the storage on which the version-specific process_message and get-methods operate
-    cell storage = cs~load_ref();
-
-    return storage;
+    return get_data().begin_parse().preload_ref();
 }
--}
 
 cell wrap_storage(int version_id, cell storage) inline {
     ;; add additional data required for versioning in this cell

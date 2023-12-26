@@ -76,15 +76,15 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
     int version = ds.preload_uint(32);
     cell storage = ds.preload_ref();
 
-    throw_if(200, expected_version < version);
+    ;; throw_if(200, expected_version < version);
 
     int setcode = false;
-    if (expected_version > version) {
+    if (expected_version != version) {
         throw_if(200, expected_code.null?());
         setcode = true;
     }
 
-    while (version < expected_version) {
+    while (version != expected_version) {
         (slice mig, int found) = migrations.udict_get?(32, version);
         throw_unless(400, found);
         int next = mig~load_uint(32);
@@ -95,8 +95,6 @@ cell migrate_one(cell old_storage) { ;; it's just a placeholder that is required
         }
         version = next;
     }
-
-    throw_if(200, version > expected_version);
 
     if (setcode) {
         set_code(expected_code);

@@ -59,7 +59,7 @@ cell migrate_one(cell old_storage) { return old_storage; }
     cell storage = ds.preload_ref();
 
     if (expected_version != version) {
-        ;; throw_if(200, expected_code.null?());
+        throw_if(200, expected_code.null?());
 
         while (version != expected_version) {
             (slice mig, int found) = migrations.udict_get?(32, version);
@@ -76,6 +76,12 @@ cell migrate_one(cell old_storage) { return old_storage; }
 
         set_c3(expected_code.begin_parse().bless());
         set_code(expected_code);
+        set_data(begin_cell()
+            .store_uint(version, 32)
+            .store_ref(storage)
+            .end_cell()
+        );
+        commit();
     }
 
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());

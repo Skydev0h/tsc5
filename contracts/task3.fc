@@ -1,5 +1,9 @@
 #include "imports/stdlib.fc";
 
+() ret() impure asm "RET";
+() return_if(int cond) impure asm "IFRET";
+(slice) udict_get_or_throw_400?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGET" "400 THROWIFNOT";
+
 cell get_storage() inline {
     return get_data().begin_parse().preload_ref();
 }
@@ -18,31 +22,36 @@ int version() method_id {
 }
 
 () recv_internal(int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_empty?()) { return(); } ;; deploy / ordinary
+    ;; if (in_msg_body.slice_empty?()) { return(); } ;; deploy / ordinary
+    return_if(in_msg_body.slice_empty?());
+
     int expected_version = in_msg_body~load_uint(32);
-    cell expected_code = in_msg_body~load_maybe_ref();
-    cell migrations = in_msg_body~load_dict();
-    cell payload = in_msg_body~load_ref();
 
     if (expected_version == 0) {
-;;        if (expected_code.null?()) {
-;;            if (migrations.dict_empty?()) {
         set_data(wrap_storage(1, get_data()));
+        ret();
+        expected_version~impure_touch();
+        in_msg_body~impure_touch();
+        in_msg_full~impure_touch();
+        balance~impure_touch();
+        msg_value~impure_touch();
         return ();
- ;;           }
- ;;       }
     }
+
+    cell expected_code = in_msg_body~load_maybe_ref();
+    cell migrations = in_msg_body~load_dict();
+    cell payload = in_msg_body.preload_ref();
 
     slice ds = get_data().begin_parse();
     int version = ds~load_uint(32);
     cell storage = ds.preload_ref();
 
-    if (expected_version != version) {
+    if (version != expected_version) {
 
         while (version != expected_version) {
             ;; ~dump([version, expected_version]);
-            (slice mig, int found) = migrations.udict_get?(32, version);
-            throw_unless(400, found);
+            slice mig = migrations.udict_get_or_throw_400?(32, version);
+            ;; throw_unless(400, found);
             ;; mig~dump();
             int next = mig~load_uint(32);
             cell mc = mig.preload_maybe_ref();
@@ -71,6 +80,13 @@ int version() method_id {
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
 
     set_data(wrap_storage(version, storage));
+
+    {-
+    ret();
+    migrations~impure_touch();
+    expected_code~impure_touch();
+    expected_version~impure_touch();
+    -}
 }
 
 ;; <<<<< Custom version-specific code begins
@@ -84,26 +100,3 @@ cell process_message(cell storage, int msg_value, int balance, cell in_msg_full,
 cell migrate_one(cell old_storage) { return old_storage; }
 
 ;; Custom version-specific code ends >>>>>
-
-() __deep_fifting__() impure asm
-"@atend @ 1 { execute"
-"    current@ context@ current!"
-"    {"
-"        }END> b>"
-"        <{"
-"        SETCP0 DUP"
-"        IFNOTJMP:<{"
-"            DROP over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
-"        }>"
-"        swap <s ref@"
-"         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
-"        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
-"        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
-"        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
-"        }> b>"
-"    } : }END>c"
-"    current@ context! current!"
-"} does @atend !"
-;
-
-() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

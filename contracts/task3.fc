@@ -4,11 +4,11 @@
 () return_if(int cond) impure asm "IFRET";
 (slice) udict_get_or_throw_400?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGET" "400 THROWIFNOT";
 
-cell get_storage() inline method_id(3) {
+cell get_storage() inline {
     return get_data().begin_parse().preload_ref();
 }
 
-cell wrap_storage(int version_id, cell storage) inline method_id(4) {
+cell wrap_storage(int version_id, cell storage) inline {
     ;; add additional data required for versioning in this cell
     return begin_cell()
         .store_uint(version_id, 32)
@@ -21,10 +21,10 @@ int version() method_id {
     return get_data().begin_parse().preload_uint(32);
 }
 
-cell process_message(cell storage, int msg_value, int balance,
-    cell in_msg_full, slice in_msg_body) impure method_id(2);
+cell migrate_one(cell old_storage) method_id(3);
 
-cell migrate_one(cell old_storage) method_id(1);
+cell process_message(cell storage, int msg_value, int balance,
+    cell in_msg_full, slice in_msg_body) impure method_id(4);
 
 () recv_internal(int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
     ;; if (in_msg_body.slice_empty?()) { return(); } ;; deploy / ordinary

@@ -22,7 +22,6 @@
         .store_slice(receiver)
         .store_uint(0, 4 + 1 + 4 + 4 + 64 + 32 + 1 + 1);
     send_raw_message(msg.end_cell(), 128);
-
 }
 
 () main(slice body, int is_external) {
@@ -31,8 +30,8 @@
 
     if (body~is_update_call()) {
 
+        cell ref = body~load_ref();
         slice signature = body.skip_bits(64).preload_bits(512);
-        cell ref = body.preload_ref();
         int hash = cell_hash(ref);
         slice sub = ref.begin_parse();
         int locked_for = sub~load_uint(32);
@@ -71,11 +70,12 @@
 
 ;; get_seqno get_execution_time
 int getter(int id) method_id(111) {
+    slice s = get_data().begin_parse();
     if (id == 77871) { ;; get_seqno
-        return get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
+        return s.skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
     }
     ;; get_execution_time
-    return get_data().begin_parse().skip_bits(256).preload_uint(32);
+    return s.skip_bits(256).preload_uint(32);
 }
 
 {-

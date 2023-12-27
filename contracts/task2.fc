@@ -26,7 +26,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
-        cell users = data~load_dict();
+        cell users = data.preload_dict();
 
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
         slice sender = full_msg_slice~load_msg_addr();
@@ -52,7 +52,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
-        cell users = data~load_dict();
+        cell users = data.preload_dict();
 
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
         slice sender = full_msg_slice~load_msg_addr();
@@ -76,7 +76,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     if (in_msg_body~is_transfer_call()) {
         slice data = get_data().begin_parse();
         data~load_msg_addr();
-        cell users = data~load_dict();
+        cell users = data.preload_dict();
         throw_if(122, users.null?());
 
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
@@ -102,10 +102,10 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         }
 
         builder base = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(jetton_address)
-        .store_coins(20000000) ;;
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+            .store_uint(0x18, 6)
+            .store_slice(jetton_address)
+            .store_coins(20000000) ;;
+            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
 
         builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
         ;; .store_uint(0x0f8a7ea5, 32)
@@ -144,7 +144,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     slice data = get_data().begin_parse();
     data~load_msg_addr();
-    cell users = data~load_dict();
+    cell users = data.preload_dict();
     throw_if(122, users.null?());
 
     ;; in_msg_body = in_msg_body.skip_bits(64);
@@ -165,7 +165,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     }
 
-    builder base = begin_cell().store_uint(0x18, 6);
+    builder base = begin_cell().store_uint(0x18, 6).store_uint(1024, 3 + 8); ;; 10 0 00000000
 
     do {
 
@@ -174,7 +174,6 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         int value = muldiv(user_share, amount, total_share);
         send_raw_message(
             base
-            .store_uint(1024, 3 + 8) ;; 10 0 00000000
             .store_slice(user_addr)
             .store_coins(value)
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)

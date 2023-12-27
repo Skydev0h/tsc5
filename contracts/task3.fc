@@ -80,13 +80,11 @@ int version() method_id {
     storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
 
     set_data(wrap_storage(version, storage));
-
-    {-
+    
     ret();
     migrations~impure_touch();
     expected_code~impure_touch();
     expected_version~impure_touch();
-    -}
 }
 
 ;; <<<<< Custom version-specific code begins

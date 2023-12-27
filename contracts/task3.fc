@@ -1,17 +1,5 @@
 #include "imports/stdlib.fc";
 
-;; <<<<< Custom version-specific code begins
-
-cell process_message(cell storage, int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
-    slice cs = storage.begin_parse();
-    int current_amount = cs.preload_uint(32);
-    return begin_cell().store_uint(current_amount + 1, 32).end_cell();
-}
-
-cell migrate_one(cell old_storage) { return old_storage; }
-
-;; Custom version-specific code ends >>>>>
-
 cell get_storage() inline {
     return get_data().begin_parse().preload_ref();
 }
@@ -84,3 +72,15 @@ int version() method_id {
 
     set_data(wrap_storage(version, storage));
 }
+
+;; <<<<< Custom version-specific code begins
+
+cell process_message(cell storage, int msg_value, int balance, cell in_msg_full, slice in_msg_body) impure {
+    slice cs = storage.begin_parse();
+    int current_amount = cs.preload_uint(32);
+    return begin_cell().store_uint(current_amount + 1, 32).end_cell();
+}
+
+cell migrate_one(cell old_storage) { return old_storage; }
+
+;; Custom version-specific code ends >>>>>

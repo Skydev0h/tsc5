@@ -70,12 +70,11 @@
 
 ;; get_seqno get_execution_time
 int getter(int id) method_id(111) {
-    slice s = get_data().begin_parse();
     if (id == 77871) { ;; get_seqno
-        return s.skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
+        return get_data().begin_parse().skip_bits(256 + 32 + 3 + 8 + 256).preload_uint(32);
     }
     ;; get_execution_time
-    return s.skip_bits(256).preload_uint(32);
+    return get_data().begin_parse().skip_bits(256).preload_uint(32);
 }
 
 {-

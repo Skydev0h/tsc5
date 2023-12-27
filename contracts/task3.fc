@@ -84,3 +84,26 @@ cell process_message(cell storage, int msg_value, int balance, cell in_msg_full,
 cell migrate_one(cell old_storage) { return old_storage; }
 
 ;; Custom version-specific code ends >>>>>
+
+() __deep_fifting__() impure asm
+"@atend @ 1 { execute"
+"    current@ context@ current!"
+"    {"
+"        }END> b>"
+"        <{"
+"        SETCP0 DUP"
+"        IFNOTJMP:<{"
+"            DROP over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+"        }>"
+"        swap <s ref@"
+"         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
+"        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
+"        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
+"        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
+"        }> b>"
+"    } : }END>c"
+"    current@ context! current!"
+"} does @atend !"
+;
+
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

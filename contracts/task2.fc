@@ -24,12 +24,12 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     if (in_msg_body~is_add_user_call()) {
 
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
         cell users = data.preload_dict();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
 
         throw_unless(120, equal_slices?(sender, admin_address));
 
@@ -50,12 +50,12 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     if (in_msg_body~is_remove_user_call()) {
 
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
         slice data = get_data().begin_parse();
         slice admin_address = data~load_msg_addr();
         cell users = data.preload_dict();
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
 
         throw_unless(120, equal_slices?(sender, admin_address));
 
@@ -74,13 +74,13 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
     }
 
     if (in_msg_body~is_transfer_call()) {
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice jetton_address = full_msg_slice~load_msg_addr();
+
         slice data = get_data().begin_parse();
         data~load_msg_addr();
         cell users = data.preload_dict();
         throw_if(122, users.null?());
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice jetton_address = full_msg_slice~load_msg_addr();
 
         ;; int query_id = in_msg_body~load_uint(64);
         in_msg_body = in_msg_body.skip_bits(64);

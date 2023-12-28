@@ -18,60 +18,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
 () return_if(int cond) impure asm "IFRET";
 
-() main(int msg_value, cell in_msg_full, slice in_msg_body, int is_external) impure {
-
-    return_if(is_external);
-
-    if (in_msg_body~is_add_user_call()) {
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
-
-        slice data = get_data().begin_parse();
-        slice admin_address = data~load_msg_addr();
-        cell users = data.preload_dict();
-
-        throw_unless(120, equal_slices?(sender, admin_address));
-
-        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
-        slice address = in_msg_body~load_bits(256);
-        slice share = in_msg_body.preload_bits(32);
-
-        users~dict_set(256, address, share);
-
-        set_data(begin_cell()
-            .store_slice(admin_address)
-            .store_dict(users)
-        .end_cell());
-
-        return ();
-
-    }
-
-    if (in_msg_body~is_remove_user_call()) {
-
-        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
-        slice sender = full_msg_slice~load_msg_addr();
-
-        slice data = get_data().begin_parse();
-        slice admin_address = data~load_msg_addr();
-        cell users = data.preload_dict();
-
-        throw_unless(120, equal_slices?(sender, admin_address));
-
-        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
-        slice address = in_msg_body.preload_bits(256);
-
-        throw_unless(121, users~dict_delete?(256, address));
-
-        set_data(begin_cell()
-            .store_slice(admin_address)
-            .store_dict(users)
-        .end_cell());
-
-        return ();
-
-    }
+() sub(int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
 
     if (in_msg_body~is_transfer_call()) {
         slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
@@ -102,10 +49,10 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         }
 
         builder base = begin_cell()
-            .store_uint(0x18, 6)
-            .store_slice(jetton_address)
-            .store_coins(20000000) ;;
-            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        .store_uint(0x18, 6)
+        .store_slice(jetton_address)
+        .store_coins(20000000) ;;
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
 
         builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
         ;; .store_uint(0x0f8a7ea5, 32)
@@ -182,6 +129,65 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
     }
     until(stk.null?());
+
+}
+
+() main(int msg_value, cell in_msg_full, slice in_msg_body, int is_external) impure {
+
+    return_if(is_external);
+
+    if (in_msg_body~is_add_user_call()) {
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data.preload_dict();
+
+        throw_unless(120, equal_slices?(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body~load_bits(256);
+        slice share = in_msg_body.preload_bits(32);
+
+        users~dict_set(256, address, share);
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+        .end_cell());
+
+        return ();
+
+    }
+
+    if (in_msg_body~is_remove_user_call()) {
+
+        slice full_msg_slice = in_msg_full.begin_parse().skip_bits(4);
+        slice sender = full_msg_slice~load_msg_addr();
+
+        slice data = get_data().begin_parse();
+        slice admin_address = data~load_msg_addr();
+        cell users = data.preload_dict();
+
+        throw_unless(120, equal_slices?(sender, admin_address));
+
+        in_msg_body = in_msg_body.skip_bits(64 + 3 + 8);
+        slice address = in_msg_body.preload_bits(256);
+
+        throw_unless(121, users~dict_delete?(256, address));
+
+        set_data(begin_cell()
+            .store_slice(admin_address)
+            .store_dict(users)
+        .end_cell());
+
+        return ();
+
+    }
+
+    sub(msg_value, in_msg_full, in_msg_body);
 
 }
 

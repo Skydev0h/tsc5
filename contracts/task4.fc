@@ -19,10 +19,21 @@ forall X -> (tuple, ()) ~t:=(tuple t, X value, int index) asm "SETINDEXVAR";
     X 88 58 | 1...0...1...0
 -}
 
-const int  empty_tile_shift = 16;
-const int   weak_tile_shift = 16 + empty_tile_shift;  ;; 32
-const int strong_tile_shift = 16 + weak_tile_shift;   ;; 48
-const int    infinity_shift = 16 + strong_tile_shift; ;; 64
+const int  empty_tile_shift = 11;
+const int   weak_tile_shift = 10 + empty_tile_shift;  ;; 32
+const int strong_tile_shift = 10 + weak_tile_shift;   ;; 48
+const int    infinity_shift = 10 + strong_tile_shift; ;; 64
+
+const int coord_shift = 6;
+const int coord_mask_upper = (1 << empty_tile_shift) - 1;
+const int coord_mask_lower = (1 << coord_shift) - 1;
+
+const int empty_tile_mask = (1 << (weak_tile_shift - empty_tile_shift)) - 1;
+const int weak_tile_mask = (1 << (strong_tile_shift - weak_tile_shift)) - 1;
+const int strong_tile_mask = (1 << (infinity_shift - strong_tile_shift)) - 1;
+
+const int fin_shift = coord_shift - 1;
+const int fin_bit = 1 << fin_shift;
 
 const int key_len = infinity_shift;
 const int vkeylen = empty_tile_shift;
@@ -34,16 +45,18 @@ const int  final_tile_price = empty_tile_price;
 const int    infinity_price = (1 << infinity_shift) - 1;
 
 (cell, cell, int, tuple) update(slice empty, cell to_visit, cell visited, int ch, int cp, tuple tp'y, tuple atp'y, int x', int y') inline {
-    int xy' = y' + (x' << 8);
-    int pr = atp'y.t:(x') + xy';
-    int pr' = cp + tp'y.t:(x') + xy';
-    int fin = pr' & 0x80;
+    int xy' = y' + (x' << coord_shift);
+    int pr = atp'y.t:(x');
+    int pr' = cp + tp'y.t:(x');
     if (pr' < pr) {
+        pr' += xy';
+        int fin = pr' & fin_bit;
+        ch |= 1 | fin;
         pr' -= fin;
         atp'y~t:=(pr', x');
-        ch |= 1 | fin;
         (_, int is_visited) = visited.udict_get?(vkeylen, xy');
         ifnot (is_visited) {
+            pr += xy';
             if (pr < infinity_price) {
                 to_visit~udict_delete?(key_len, pr);
             }
@@ -92,7 +105,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             int c = t.t:(x);
             if (c == "S"u) { Sx = x; Sy = y; }
             int ctp = tile_prices.t:(c);
-            if (c == "E"u) { ctp = ctp | 0x80; Ex = x; Ey = y; }
+            if (c == "E"u) { ctp = ctp | fin_bit; Ex = x; Ey = y; }
             r~t:+( ctp );
             x += 1;
         }
@@ -113,26 +126,25 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
     ;; to_visit~udict_set(key_len, Sy | (Sx << 8), empty);
     ;; (int key, _, int ok) = to_visit~udict_delete_get_min(key_len);
-    int key = Sy + (Sx << 8);
+    int key = Sy + (Sx << coord_shift);
     int ok = true;
 
     int ly' = ly - 1; int lx' = lx - 1;
 
     while (ok) {
 
-        int xy = key & 0xFFFF;
-        int y = xy & 0xFF;
-        int x = xy >> 8;
+        int xy = key & coord_mask_upper;
         int cp = key - xy;
+        int x = xy >> coord_shift;
+        int y = xy & coord_mask_lower;
 
         visited~udict_set(vkeylen, xy, empty);
 
         tuple tp'y = tp.t:(y);
         tuple atp'y = atp.t:(y);
         int ch = 0;
-        int fin = 0;
 
-        if (x != 0) {
+        if (x) {
             (to_visit, visited, ch, atp'y) = update(empty, to_visit, visited, ch, cp, tp'y, atp'y, x - 1, y);
         }
 
@@ -142,20 +154,20 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
         if (ch) {
             atp~t:=(atp'y, y);
-            fin = fin | (ch & 0x80);
+            ok &= 1 - (ch >> fin_shift);
             ch = 0;
         }
 
-        if (y != 0) {
+        if (y) {
             int y' = y - 1;
             tuple tp'y' = tp.t:(y');
             tuple atp'y' = atp.t:(y');
 
-            if (x != 0) {
+            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+
+            if (x) {
                 (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
             }
-
-            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
 
             if (x != lx') {
                 (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
@@ -163,7 +175,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
             if (ch) {
                 atp~t:=(atp'y', y');
-                fin = fin | (ch & 0x80);
+                ok &= 1 - (ch >> fin_shift);
                 ch = 0;
             }
         }
@@ -173,11 +185,11 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             tuple tp'y' = tp.t:(y');
             tuple atp'y' = atp.t:(y');
 
-            if (x != 0) {
+            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+
+            if (x) {
                 (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
             }
-
-            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
 
             if (x != lx') {
                 (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
@@ -185,23 +197,21 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
             if (ch) {
                 atp~t:=(atp'y', y');
-                fin = fin | (ch & 0x80);
+                ok &= 1 - (ch >> fin_shift);
                 ;; ch = false;
             }
         }
 
-        if (fin) {
-            ok = false;
-        } else {
+        if (ok) {
             (key, _, ok) = to_visit~udict::delete_get_min(key_len);
         }
 
     }
 
     int finpr = atp.t::(Ey, Ex);
-    int strong = (finpr >> strong_tile_shift) & 0xFFFF;
-    int weak = (finpr >> weak_tile_shift) & 0xFFFF;
-    int dist = (finpr >> empty_tile_shift) & 0xFFFF;
+    int strong = (finpr >> strong_tile_shift) & strong_tile_mask;
+    int weak = (finpr >> weak_tile_shift) & weak_tile_mask;
+    int dist = (finpr >> empty_tile_shift) & empty_tile_mask;
 
     tuple sol = maze;
 
@@ -209,16 +219,16 @@ const int    infinity_price = (1 << infinity_shift) - 1;
     int wx = Ex;
     int wy = Ey;
 
-    int mask = ~ 0xFFFF;
+    int mask = ~ coord_mask_upper;
 
     while (walk) {
 
-        int cp = atp.t::(wy, wx) & mask;
         int nx = wx; int ny = wy;
+        int cp = atp.t::(wy, wx) & mask;
 
         tuple atp'wy = atp.t:(wy);
 
-        if (wx != 0) {
+        if (wx) {
             (nx, ny, cp) = walker(nx, ny, cp, atp'wy, wx - 1, wy);
         }
 
@@ -226,15 +236,15 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             (nx, ny, cp) = walker(nx, ny, cp, atp'wy, wx + 1, wy);
         }
 
-        if (wy != 0) {
+        if (wy) {
             int wy' = wy - 1;
             tuple atp'wy' = atp.t:(wy');
 
-            if (wx != 0) {
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
+
+            if (wx) {
                 (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx - 1, wy');
             }
-
-            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
 
             if (wx != lx') {
                 (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx + 1, wy');
@@ -245,11 +255,11 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             int wy' = wy + 1;
             tuple atp'wy' = atp.t:(wy');
 
-            if (wx != 0) {
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
+
+            if (wx) {
                 (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx - 1, wy');
             }
-
-            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
 
             if (wx != lx') {
                 (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx + 1, wy');

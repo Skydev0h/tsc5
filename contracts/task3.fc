@@ -135,19 +135,6 @@ cell trigger(cell c) method_id(888) { return migrate_one(c); }
 "       { swap <s ref@ 3 swap @procdictkeylen idict@ { B{343034} B>$ abort } ifnot @addop }"
 "       cond"
 "       }> b>"
-{-
-"        <{"
-"        SETCP0 DUP BITSIZE 1 RSHIFT#"
-"        IFNOTJMP:<{"
-"            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
-"        }>"
-"        swap <s ref@"
-"         0  swap @procdictkeylen idict- drop" ;; drop recv_internal
-"        -1  swap @procdictkeylen idict- drop" ;; drop recv_external
-"        777 swap @procdictkeylen idict- drop" ;; drop __do_deep_fifting__
-"        @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG"
-"        }> b>"
--}
 "    } : }END>c"
 "    current@ context! current!"
 "} does @atend !"

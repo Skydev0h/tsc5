@@ -18,6 +18,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
 () return_if(int cond) impure asm "IFRET";
 
+builder store_builder_ref(builder to, builder from) asm "STBREFR";
+
 () sub(int msg_value, cell in_msg_full, slice in_msg_body) impure inline {
 
     if (in_msg_body~is_transfer_call()) {
@@ -68,7 +70,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             (slice user_addr, int user_share) = unpair(user_data);
             int value = muldiv(user_share, amount, total_share);
             send_raw_message(
-                base.store_ref(
+                base.store_builder_ref(
                     msg_base
                         .store_coins(value)        ;; amount:(VarUInteger 16)
                         ;; .store_uint(1024, 3 + 8) ;; 10 0 00000000
@@ -82,7 +84,8 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                         ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
                         ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
                         ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
-                    .end_cell())
+                    ;;.end_cell()
+                )
                 .end_cell(),
                 1);
 
@@ -131,7 +134,7 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
                 .store_slice(user_addr)
                 .store_coins(value)
                 .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                .end_cell(),
+            .end_cell(),
             1);
 
     }

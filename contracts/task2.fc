@@ -48,15 +48,19 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
 
         }
 
-        builder base = begin_cell()
-        .store_uint(0x18, 6)
-        .store_slice(jetton_address)
-        .store_coins(20000000) ;;
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        builder begincell = begin_cell();
+        builder base = begincell
+            .store_uint(0x18, 6)
+            .store_slice(jetton_address)
+            .store_coins(20000000) ;;
+            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1);
 
-        builder msg_base = begin_cell().store_uint(0x0f8a7ea50000000000000000, 32 + 64);
+        builder msg_base = begincell.store_uint(0x0f8a7ea50000000000000000, 32 + 64);
         ;; .store_uint(0x0f8a7ea5, 32)
         ;; .store_uint(0, 64); ;; query_id:uint64
+
+        builder mp = begincell.store_uint(1024, 3 + 8);
+        builder ms = begincell.store_uint(514, 14);
 
         do {
 
@@ -66,15 +70,18 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
             send_raw_message(
                 base.store_ref(
                     msg_base
-                    .store_coins(value)        ;; amount:(VarUInteger 16)
-                    .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                    .store_slice(user_addr)    ;; destination:MsgAddress
-                    .store_uint(1024, 3 + 8) ;; 10 0 00000000
-                    .store_slice(user_addr)    ;; response_destination:MsgAddress
-                    .store_uint(514, 14)
-                    ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
-                    ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
-                    ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
+                        .store_coins(value)        ;; amount:(VarUInteger 16)
+                        ;; .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                        .store_builder(mp)
+                        .store_slice(user_addr)    ;; destination:MsgAddress
+                        ;; .store_uint(1024, 3 + 8) ;; 10 0 00000000
+                        .store_builder(mp)
+                        .store_slice(user_addr)    ;; response_destination:MsgAddress
+                        ;; .store_uint(514, 14)
+                        .store_builder(ms)
+                        ;; .store_dict(null())        ;; custom_payload:(Maybe ^Cell)
+                        ;; .store_coins(1)            ;; forward_ton_amount:(VarUInteger 16)
+                        ;; .store_dict(null()) ;;  0  ;; forward_payload:(Either Cell ^Cell)
                     .end_cell())
                 .end_cell(),
                 1);
@@ -121,10 +128,10 @@ int equal_slices?(slice a, slice b) asm "SDEQ";
         int value = muldiv(user_share, amount, total_share);
         send_raw_message(
             base
-            .store_slice(user_addr)
-            .store_coins(value)
-            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-            .end_cell(),
+                .store_slice(user_addr)
+                .store_coins(value)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .end_cell(),
             1);
 
     }

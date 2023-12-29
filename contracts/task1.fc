@@ -8,7 +8,7 @@
 
 () return_if_not(int cond) impure asm "IFNOTRET";
 
-() claim_sub() impure inline {
+() claim_sub() impure inline_ref {
 
     slice data = get_data().begin_parse().skip_bits(256);
     int execution_time = data~load_uint(32);
@@ -97,10 +97,10 @@ int get_execution_time() method_id {
     "        }END> b>"
     "        <{"
     "        SETCP0 DUP BITSIZE 1 RSHIFT#"
-    "        IFJMP:<{"
-    "            over <s ref@ 111 swap @procdictkeylen idict@ { B{6E6F206D65746820313131} B>$ abort } ifnot @addop"
+    "        IFNOTJMP:<{"
+    "            over <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
     "        }>"
-    "        swap <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+    "        swap <s ref@ 111 swap @procdictkeylen idict@ { B{6E6F206D65746820313131} B>$ abort } ifnot @addop"
 {-
     "        swap <s ref@"
     "         0  swap @procdictkeylen idict- drop" ;; drop recv_internal

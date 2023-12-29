@@ -45,7 +45,7 @@ cell trigger(cell c) method_id(888) { return migrate_one(c); }
 
     int expected_version = in_msg_body~load_uint(32);
 
-    if (expected_version == 0) {
+    ifnot (expected_version) {
         set_data(wrap_storage(1, get_data()));
         {-
         ret();

@@ -56,10 +56,10 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         atp'y~t:=(pr', x');
         (_, int is_visited) = visited.udict_get?(vkeylen, xy');
         ifnot (is_visited) {
-            pr += xy';
-            if (pr < infinity_price) {
-                to_visit~udict_delete?(key_len, pr);
-            }
+            ;; pr += xy';
+            ;; if (pr < infinity_price) {
+            ;;    to_visit~udict_delete?(key_len, pr);
+            ;; }
             to_visit~udict_set(key_len, pr', empty);
         }
     }

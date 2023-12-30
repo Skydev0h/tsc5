@@ -78,7 +78,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
 ;; (int, int, int, tuple, tuple) solve(int n, int m, tuple maze) method_id {
 (int, int, int, tuple) main(int n, int m, tuple maze) {
-    if (n >= 0) return (-1, 0, 0, null());
+    if (n >= 0) { return (-1, 0, 0, null()); }
     int ly = n; int lx = m;
     ;; ###########################################################
     tuple tile_prices = empty_tuple();

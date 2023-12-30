@@ -25,13 +25,14 @@ forall X -> (tuple, ()) ~t:=(tuple t, X value, int index) asm "SETINDEXVAR";
     X 88 58 | 1...0...1...0
 -}
 
-const int  empty_tile_shift = 11;
+const int  astar_dist_shift = 11;
+const int  empty_tile_shift = 21;
 const int   weak_tile_shift = 10 + empty_tile_shift;  ;; 32
 const int strong_tile_shift = 10 + weak_tile_shift;   ;; 48
 const int    infinity_shift = 10 + strong_tile_shift; ;; 64
 
 const int coord_shift = 6;
-const int coord_mask_upper = (1 << empty_tile_shift) - 1;
+const int coord_mask_upper = (1 << astar_dist_shift) - 1;
 const int coord_mask_lower = (1 << coord_shift) - 1;
 
 const int empty_tile_mask = (1 << (weak_tile_shift - empty_tile_shift)) - 1;
@@ -85,6 +86,23 @@ const int    infinity_price = (1 << infinity_shift) - 1;
     return (nx, ny, cp);
 }
 
+(int, int) find_end(int ly, int lx, tuple maze) inline {
+    int y = 0;
+    repeat (ly) {
+        tuple t = maze.t:(y);
+        int x = 0;
+        repeat (lx) {
+            int c = t.t:(x);
+            if (c == "E"u) {
+                return (x, y);
+            }
+            x += 1;
+        }
+        y += 1;
+    }
+    return (-1, -1);
+}
+
 ;; (int, int, int, tuple, tuple) solve(int n, int m, tuple maze) method_id {
 (int, int, int, tuple) main(int n, int m, tuple maze) {
     int ly = n; int lx = m;
@@ -102,7 +120,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
     ;; ###########################################################
 
     int Sx = 0; int Sy = 0;
-    int Ex = 0; int Ey = 0;
+    (int Ex, int Ey) = find_end(ly, lx, maze);
 
     tuple tp = empty_tuple();
     int y = 0;
@@ -113,8 +131,8 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         repeat(lx) {
             int c = t.t:(x);
             if (c == "S"u) { Sx = x; Sy = y; }
-            int ctp = tile_prices.t:(c);
-            if (c == "E"u) { ctp = ctp | fin_bit; Ex = x; Ey = y; }
+            int ctp = tile_prices.t:(c) + ((abs(Ex - x) + abs(Ey - y)) << astar_dist_shift);
+            if (c == "E"u) { ctp = ctp | fin_bit;}
             r~t:+( ctp );
             x += 1;
         }

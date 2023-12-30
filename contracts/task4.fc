@@ -131,7 +131,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         repeat(lx) {
             int c = t.t:(x);
             if (c == "S"u) { Sx = x; Sy = y; }
-            int ctp = tile_prices.t:(c) + ((abs(Ex - x) + abs(Ey - y)) << astar_dist_shift);
+            int ctp = tile_prices.t:(c) + (((Ex - x) * (Ex - x) + (Ey - y) * (Ey - y)) << astar_dist_shift);
             if (c == "E"u) { ctp = ctp | fin_bit;}
             r~t:+( ctp );
             x += 1;

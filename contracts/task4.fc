@@ -50,7 +50,7 @@ const int strong_tile_price = (1 << strong_tile_shift) | empty_tile_price;
 const int  final_tile_price = empty_tile_price;
 const int    infinity_price = (1 << infinity_shift) - 1;
 
-(cell, cell, int, tuple) update(slice empty, cell to_visit, cell visited, int ch, int cp, tuple tp'y, tuple atp'y, int x', int y') inline {
+(cell, {-cell,-} int, tuple) update(slice empty, cell to_visit, {-cell visited,-} int ch, int cp, tuple tp'y, tuple atp'y, int x', int y') inline {
     int xy' = y' + (x' << coord_shift);
     int pr = atp'y.t:(x');
     int pr' = cp + tp'y.t:(x');
@@ -72,7 +72,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         }
         -}
     }
-    return (to_visit, visited, ch, atp'y);
+    return (to_visit, {-visited,-} ch, atp'y);
 }
 
 (int, int, int) walker(int nx, int ny, int cp, tuple atp'y, int x, int y) inline {
@@ -131,7 +131,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
     slice empty = get_data().begin_parse();
 
     cell to_visit = new_dict();
-    cell visited = new_dict();
+    ;; cell visited = new_dict();
 
     ;; to_visit~udict_set(key_len, Sy | (Sx << 8), empty);
     ;; (int key, _, int ok) = to_visit~udict_delete_get_min(key_len);
@@ -147,7 +147,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         int x = xy >> coord_shift;
         int y = xy & coord_mask_lower;
 
-        visited~udict_set(vkeylen, xy, empty);
+        ;; visited~udict_set(vkeylen, xy, empty);
         ;; (_, int already) = visited~udict_set_get?(vkeylen, xy, empty);
 
         tuple tp'y = tp.t:(y);
@@ -155,11 +155,11 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         int ch = 0;
 
         if (x) {
-            (to_visit, visited, ch, atp'y) = update(empty, to_visit, visited, ch, cp, tp'y, atp'y, x - 1, y);
+            (to_visit, {-visited,-} ch, atp'y) = update(empty, to_visit, {-visited,-} ch, cp, tp'y, atp'y, x - 1, y);
         }
 
         if (x != lx') {
-            (to_visit, visited, ch, atp'y) = update(empty, to_visit, visited, ch, cp, tp'y, atp'y, x + 1, y);
+            (to_visit, {-visited,-} ch, atp'y) = update(empty, to_visit, {-visited,-} ch, cp, tp'y, atp'y, x + 1, y);
         }
 
         if (ch) {
@@ -173,14 +173,14 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             tuple tp'y' = tp.t:(y');
             tuple atp'y' = atp.t:(y');
 
-            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+            (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x, y');
 
             if (x) {
-                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
+                (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x - 1, y');
             }
 
             if (x != lx') {
-                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
+                (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x + 1, y');
             }
 
             if (ch) {
@@ -195,14 +195,14 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             tuple tp'y' = tp.t:(y');
             tuple atp'y' = atp.t:(y');
 
-            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+            (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x, y');
 
             if (x) {
-                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
+                (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x - 1, y');
             }
 
             if (x != lx') {
-                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
+                (to_visit, {-visited,-} ch, atp'y') = update(empty, to_visit, {-visited,-} ch, cp, tp'y', atp'y', x + 1, y');
             }
 
             if (ch) {

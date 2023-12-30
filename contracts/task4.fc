@@ -10,6 +10,12 @@ forall X -> X t::(tuple t, int index1, int index2) asm(index2 t index1) "INDEXVA
 forall X -> tuple t:=(tuple t, X value, int index) asm "SETINDEXVAR";
 forall X -> (tuple, ()) ~t:=(tuple t, X value, int index) asm "SETINDEXVAR";
 
+;; DICTUGET	i D n - x -1 or 0
+;; DICTUSET	x i D n - D'
+;; DICTUSETGET	x i D n - D' y -1 or D' 0
+;; (cell, slice, int) udict_set_get?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSETGET" "NULLSWAPIFNOT";
+;; (cell, (slice, int)) ~udict_set_get?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSETGET" "NULLSWAPIFNOT";
+
 {-
     C dc hx   X   ?   .
     . 46 2E | 0...0...1...0
@@ -52,8 +58,10 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         pr' += xy';
         int fin = pr' & fin_bit;
         ch |= 1 | fin;
-        pr' -= fin;
+        ;; pr' -= fin;
         atp'y~t:=(pr', x');
+        to_visit~udict_set(key_len, pr', empty); ;; fragile existence
+        {-
         (_, int is_visited) = visited.udict_get?(vkeylen, xy');
         ifnot (is_visited) {
             ;; pr += xy';
@@ -62,6 +70,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
             ;; }
             to_visit~udict_set(key_len, pr', empty);
         }
+        -}
     }
     return (to_visit, visited, ch, atp'y);
 }
@@ -139,6 +148,7 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         int y = xy & coord_mask_lower;
 
         visited~udict_set(vkeylen, xy, empty);
+        ;; (_, int already) = visited~udict_set_get?(vkeylen, xy, empty);
 
         tuple tp'y = tp.t:(y);
         tuple atp'y = atp.t:(y);
@@ -215,13 +225,15 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
     tuple sol = maze;
 
-    int walk = true;
+    ;; int walk = true;
+    int num_excl = dist - 1;
     int wx = Ex;
     int wy = Ey;
 
     int mask = ~ coord_mask_upper;
 
-    while (walk) {
+    repeat (num_excl) {
+    ;;while (walk) {
 
         int nx = wx; int ny = wy;
         int cp = atp.t::(wy, wx) & mask;
@@ -268,11 +280,11 @@ const int    infinity_price = (1 << infinity_shift) - 1;
 
         wx = nx; wy = ny;
 
-        if ((wx == Sx) & (wy == Sy)) {
-            walk = false;
-        } else {
+        ;; if ((wx == Sx) & (wy == Sy)) {
+        ;;     walk = false;
+        ;; } else {
             sol~t:=(sol.t:(wy).t:=("!"u, wx), wy);
-        }
+        ;; }
 
     }
 

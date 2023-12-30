@@ -44,7 +44,6 @@ cell trigger(cell c) method_id(888) { return migrate_one(c); }
     return_if(in_msg_body.slice_empty?());
 
     int expected_version = in_msg_body~load_uint(32);
-
     ifnot (expected_version) {
         set_data(wrap_storage(1, get_data()));
         {-
@@ -66,7 +65,13 @@ cell trigger(cell c) method_id(888) { return migrate_one(c); }
     int version = ds~load_uint(32);
     cell storage = ds.preload_ref();
 
-    if (version != expected_version) {
+    if (version == expected_version) {
+
+        storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
+        set_data(wrap_storage(version, storage));
+        return();
+
+    } else {
 
         while (version != expected_version) {
             ;; ~dump([version, expected_version]);
@@ -88,19 +93,12 @@ cell trigger(cell c) method_id(888) { return migrate_one(c); }
         throw_if(200, expected_code.null?());
         set_c3(expected_code.begin_parse().bless());
         set_code(expected_code);
-        {-
-        set_data(begin_cell()
-            .store_uint(version, 32)
-            .store_ref(storage)
-            .end_cell()
-        );
-        commit();
-        -}
+
+        storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
+        set_data(wrap_storage(version, storage));
+        return();
+
     }
-
-    storage = process_message(storage, msg_value, balance, in_msg_full, payload.begin_parse());
-
-    set_data(wrap_storage(version, storage));
 
     {-
     ret();

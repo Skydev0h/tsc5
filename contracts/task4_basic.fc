@@ -57,10 +57,6 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         (_, int is_visited) = visited.udict_get?(vkeylen, xy');
         ifnot (is_visited) {
             pr += xy';
-            ;; TODO: TEST REMOVE
-            if (pr < infinity_price) {
-                to_visit~udict_delete?(key_len, pr);
-            }
             to_visit~udict_set(key_len, pr', empty);
         }
     }

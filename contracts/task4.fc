@@ -26,7 +26,7 @@ forall X -> (tuple, ()) ~t:=(tuple t, X value, int index) asm "SETINDEXVAR";
 -}
 
 const int  astar_dist_shift = 11;
-const int  empty_tile_shift = 21;
+const int  empty_tile_shift = 31;
 const int   weak_tile_shift = 10 + empty_tile_shift;  ;; 32
 const int strong_tile_shift = 10 + weak_tile_shift;   ;; 48
 const int    infinity_shift = 10 + strong_tile_shift; ;; 64

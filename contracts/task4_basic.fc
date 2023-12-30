@@ -1,163 +1,302 @@
 #include "imports/stdlib.fc";
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+forall X -> tuple t:+(tuple t, X value) asm "TPUSH";
+forall X -> (tuple, ()) ~t:+(tuple t, X value) asm "TPUSH";
+forall X -> (tuple, X) t:-(tuple t) asm "TPOP";
 
-}
+forall X -> X t:(tuple t, int index) asm "INDEXVAR";
+forall X -> X t::(tuple t, int index1, int index2) asm(index2 t index1) "INDEXVAR SWAP INDEXVAR";
 
-int tlen(tuple list) asm "TLEN";
-
-forall X -> X tget(tuple t, int index) asm "INDEXVAR";
-forall X -> (tuple, X) tpop(tuple t) asm "TPOP";
-
-forall X -> tuple tset(tuple t, X value, int index) asm "SETINDEXVAR";
-forall X -> (tuple, ()) ~tset(tuple t, X value, int index) asm "SETINDEXVAR";
-
-forall X, Y, Z, W, V -> (X, Y, Z, W, V) untuple5([X, Y, Z, W, V] t) asm "5 UNTUPLE";
-forall T1, T2, T3, T4, T5, T6, T7 -> (T1, T2, T3, T4, T5, T6, T7) untuple7([T1, T2, T3, T4, T5, T6, T7] t) asm "7 UNTUPLE";
-
-;; . X S E ? !
+forall X -> tuple t:=(tuple t, X value, int index) asm "SETINDEXVAR";
+forall X -> (tuple, ()) ~t:=(tuple t, X value, int index) asm "SETINDEXVAR";
 
 {-
-() walker(tuple maze, int x, int y, int a, int s) impure inline_ref {
-    ;; int c = maze.at(y).at(x);
-    ;; ~dump([x, y, a, s, c]);
-    if (s != 0) {
-        maze~tset(maze.tget(y).tset("!"u, x), y);
-    }
-    int y' = max(y - 1, 0);
-    int n'' = n';
-    repeat (min(y + 1, m') - y' + 1) {
-        tuple t = maze.at(y');
-        int x' = max(x - 1, 0);
-        repeat (min(x + 1, n'') - x' + 1) {
-            int c' = t.at(x');
-            ;; ~dump([x', y', c']);
-            if (c' == "."u) {
-                walker(maze, x', y', a, s + 1);
-            }
-            if (c' == "?"u) {
-                if (a != 0) {
-                    walker(maze, x', y', a - 1, s + 1);
-                }
-            }
-            if (s >= 'len) {
-                return ();
-            }
-            if (c' == "E"u) {
-                ;; ~dump([s, maze]);
-                if (s + 1 < 'len) {
-                    'len = s + 1;
-                    'maze = maze;
-                }
-                return ();
-            }
-            x' += 1;
-        }
-        y' += 1;
-    }
-}
+    C dc hx   X   ?   .
+    . 46 2E | 0...0...1...0
+    ? 63 3F | 0...1...1...0
+    E 69 45 | 0...0...1...0
+    S 83 53 | 0...0...0...0
+    X 88 58 | 1...0...1...0
 -}
 
-{-
-;;-1  obs  len  maze
-(int, int, int, tuple) solve(int n, int m, tuple maze) method_id {
+const int  empty_tile_shift = 11;
+const int   weak_tile_shift = 10 + empty_tile_shift;  ;; 32
+const int strong_tile_shift = 10 + weak_tile_shift;   ;; 48
+const int    infinity_shift = 10 + strong_tile_shift; ;; 64
 
-    accept_message();
+const int coord_shift = 6;
+const int coord_mask_upper = (1 << empty_tile_shift) - 1;
+const int coord_mask_lower = (1 << coord_shift) - 1;
+
+const int empty_tile_mask = (1 << (weak_tile_shift - empty_tile_shift)) - 1;
+const int weak_tile_mask = (1 << (strong_tile_shift - weak_tile_shift)) - 1;
+const int strong_tile_mask = (1 << (infinity_shift - strong_tile_shift)) - 1;
+
+const int fin_shift = coord_shift - 1;
+const int fin_bit = 1 << fin_shift;
+
+const int key_len = infinity_shift;
+const int vkeylen = empty_tile_shift;
+
+const int  empty_tile_price =  1 << empty_tile_shift;
+const int   weak_tile_price = (1 <<   weak_tile_shift) | empty_tile_price;
+const int strong_tile_price = (1 << strong_tile_shift) | empty_tile_price;
+const int  final_tile_price = empty_tile_price;
+const int    infinity_price = (1 << infinity_shift) - 1;
+
+(cell, cell, int, tuple) update(slice empty, cell to_visit, cell visited, int ch, int cp, tuple tp'y, tuple atp'y, int x', int y') inline {
+    int xy' = y' + (x' << coord_shift);
+    int pr = atp'y.t:(x');
+    int pr' = cp + tp'y.t:(x');
+    if (pr' < pr) {
+        pr' += xy';
+        int fin = pr' & fin_bit;
+        ch |= 1 | fin;
+        pr' -= fin;
+        atp'y~t:=(pr', x');
+        (_, int is_visited) = visited.udict_get?(vkeylen, xy');
+        ifnot (is_visited) {
+            pr += xy';
+            ;; TODO: TEST REMOVE
+            if (pr < infinity_price) {
+                to_visit~udict_delete?(key_len, pr);
+            }
+            to_visit~udict_set(key_len, pr', empty);
+        }
+    }
+    return (to_visit, visited, ch, atp'y);
+}
+
+(int, int, int) walker(int nx, int ny, int cp, tuple atp'y, int x, int y) inline {
+    int cp' = atp'y.t:(x);
+    if (cp' < cp) {
+        cp = cp';
+        nx = x;
+        ny = y;
+    }
+    return (nx, ny, cp);
+}
+
+;; (int, int, int, tuple, tuple) solve(int n, int m, tuple maze) method_id {
+(int, int, int, tuple) main(int n, int m, tuple maze) {
+    int ly = n; int lx = m;
+    ;; ###########################################################
+    tuple tile_prices = empty_tuple();
+    int z = 0;
+    repeat(46) { tile_prices~t:+(z); }  ;; 0...45
+    tile_prices~t:+(empty_tile_price);  ;; 46
+    repeat(16) { tile_prices~t:+(z); }  ;; 47..62
+    tile_prices~t:+(weak_tile_price);   ;; 63
+    repeat(5) { tile_prices~t:+(z); }   ;; 64..68
+    tile_prices~t:+(final_tile_price);  ;; 69
+    repeat(18) { tile_prices~t:+(z); }  ;; 70..87
+    tile_prices~t:+(strong_tile_price); ;; 88
+    ;; ###########################################################
 
     int Sx = 0; int Sy = 0;
-    int n' = m; ;;maze.tget(0).tlen();
-    int m' = n; ;;maze.tlen();
+    int Ex = 0; int Ey = 0;
+
+    tuple tp = empty_tuple();
     int y = 0;
-    repeat (m') {
-        tuple t = maze.at(y);
+    repeat(ly) {
+        tuple t = maze.t:(y);
+        tuple r = empty_tuple();
         int x = 0;
-        repeat (n') {
-            int c = t.at(x);
+        repeat(lx) {
+            int c = t.t:(x);
             if (c == "S"u) { Sx = x; Sy = y; }
+            int ctp = tile_prices.t:(c);
+            if (c == "E"u) { ctp = ctp | fin_bit; Ex = x; Ey = y; }
+            r~t:+( ctp );
             x += 1;
         }
+        tp~t:+(r);
         y += 1;
     }
 
-    int 'hier = 1 << 128;
+    tuple atp = empty_tuple();
+    tuple row = empty_tuple();
+    repeat(lx) { row~t:+(infinity_price); }
+    repeat(ly) { atp~t:+(row); }
+    atp~t:=(atp.t:(Sy).t:=(0, Sx), Sy);
 
-    tuple hm = empty_tuple();
-    tuple hr = empty_tuple();
-    repeat (n') { hr~tpush('hier); }
-    repeat (m') { hm~tpush(hr); }
+    slice empty = get_data().begin_parse();
 
-    m' = m' - 1;
-    n' = n' - 1;
+    cell to_visit = new_dict();
+    cell visited = new_dict();
 
-    int 'len = 'hier;
-    int 'obs = 'hier;
-    tuple 'maze = null();
-    tuple stk = null();
-    ;; tuple nstk = null();
-    stk = cons([maze, Sx, Sy, 0, 0], stk);
+    ;; to_visit~udict_set(key_len, Sy | (Sx << 8), empty);
+    ;; (int key, _, int ok) = to_visit~udict_delete_get_min(key_len);
+    int key = Sy + (Sx << coord_shift);
+    int ok = true;
 
-    {-
-    do {
+    int ly' = ly - 1; int lx' = lx - 1;
 
-        stk = nstk;
-        nstk = null();
-    -}
+    while (ok) {
 
-        do {
-            [tuple, int, int, int, int] next = stk~list_next();
-            (tuple mz, int x, int y, int ob, int le) = untuple5(next);
-            if (le != 0) {
-                mz~tset(mz.tget(y).tset("!"u, x), y);
-            }
-            int hier = (le + 1) | (ob << 32);
-            hm~tset(hm.tget(y).tset(hier, x), y);
+        int xy = key & coord_mask_upper;
+        int cp = key - xy;
+        int x = xy >> coord_shift;
+        int y = xy & coord_mask_lower;
+
+        visited~udict_set(vkeylen, xy, empty);
+
+        tuple tp'y = tp.t:(y);
+        tuple atp'y = atp.t:(y);
+        int ch = 0;
+
+        if (x) {
+            (to_visit, visited, ch, atp'y) = update(empty, to_visit, visited, ch, cp, tp'y, atp'y, x - 1, y);
+        }
+
+        if (x != lx') {
+            (to_visit, visited, ch, atp'y) = update(empty, to_visit, visited, ch, cp, tp'y, atp'y, x + 1, y);
+        }
+
+        if (ch) {
+            atp~t:=(atp'y, y);
+            ok &= 1 - (ch >> fin_shift);
+            ch = 0;
+        }
+
+        if (y) {
             int y' = y - 1;
-            repeat (3) {
-                if ((y' >= 0) & (y' <= m')) {
-                    tuple t = mz.at(y');
-                    tuple h = hm.at(y');
-                    int x' = x - 1;
-                    repeat (3) {
-                        if ((x' >= 0) & (x' <= n')) {
-                            int c' = t.at(x');
-                            int h' = h.at(x');
-                            if (hier < h') {
-                                ;; ~dump([x', y', c']);
-                                if (c' == "."u) {
-                                    stk = cons([mz, x', y', ob, le + 1], stk);
-                                }
-                                elseif (c' == "?"u) {
-                                    stk = cons([mz, x', y', ob + 1, le + 1], stk);
-                                }
-                                elseif (c' == "E"u) {
-                                    ;; ~dump([s, maze]);
-                                    if (hier < 'hier) {
-                                        'hier = hier;
-                                        'len = le + 1;
-                                        'obs = ob;
-                                        'maze = mz;
-                                    }
-                                }
-                            }
-                            if (le >= 'len) {
-                                x' = 256;
-                                y' = 256;
-                            }
-                        }
-                        x' += 1;
-                    }
-                }
-                y' += 1;
+            tuple tp'y' = tp.t:(y');
+            tuple atp'y' = atp.t:(y');
+
+            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+
+            if (x) {
+                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
             }
 
-        } until (stk.null?());
+            if (x != lx') {
+                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
+            }
 
-    ;; } until (nstk.null?());
+            if (ch) {
+                atp~t:=(atp'y', y');
+                ok &= 1 - (ch >> fin_shift);
+                ch = 0;
+            }
+        }
 
-    ifnot ('maze.null?()) {
-        return (-1, 'obs, 'len, 'maze);
+        if (y != ly') {
+            int y' = y + 1;
+            tuple tp'y' = tp.t:(y');
+            tuple atp'y' = atp.t:(y');
+
+            (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x, y');
+
+            if (x) {
+                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x - 1, y');
+            }
+
+            if (x != lx') {
+                (to_visit, visited, ch, atp'y') = update(empty, to_visit, visited, ch, cp, tp'y', atp'y', x + 1, y');
+            }
+
+            if (ch) {
+                atp~t:=(atp'y', y');
+                ok &= 1 - (ch >> fin_shift);
+                ;; ch = false;
+            }
+        }
+
+        if (ok) {
+            (key, _, ok) = to_visit~udict::delete_get_min(key_len);
+        }
+
     }
 
-    return (-1, 0, 0, null());
+    int finpr = atp.t::(Ey, Ex);
+    int strong = (finpr >> strong_tile_shift) & strong_tile_mask;
+    int weak = (finpr >> weak_tile_shift) & weak_tile_mask;
+    int dist = (finpr >> empty_tile_shift) & empty_tile_mask;
+
+    if (strong > 0) {
+        return (-1, 0, 0, null());
+    }
+
+    tuple sol = maze;
+
+    int walk = true;
+    int wx = Ex;
+    int wy = Ey;
+
+    int mask = ~ coord_mask_upper;
+
+    while (walk) {
+
+        int nx = wx; int ny = wy;
+        int cp = atp.t::(wy, wx) & mask;
+
+        tuple atp'wy = atp.t:(wy);
+
+        if (wx) {
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy, wx - 1, wy);
+        }
+
+        if (wx != lx') {
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy, wx + 1, wy);
+        }
+
+        if (wy) {
+            int wy' = wy - 1;
+            tuple atp'wy' = atp.t:(wy');
+
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
+
+            if (wx) {
+                (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx - 1, wy');
+            }
+
+            if (wx != lx') {
+                (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx + 1, wy');
+            }
+        }
+
+        if (wy != ly') {
+            int wy' = wy + 1;
+            tuple atp'wy' = atp.t:(wy');
+
+            (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx, wy');
+
+            if (wx) {
+                (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx - 1, wy');
+            }
+
+            if (wx != lx') {
+                (nx, ny, cp) = walker(nx, ny, cp, atp'wy', wx + 1, wy');
+            }
+        }
+
+        wx = nx; wy = ny;
+
+        if ((wx == Sx) & (wy == Sy)) {
+            walk = false;
+        } else {
+            sol~t:=(sol.t:(wy).t:=("!"u, wx), wy);
+        }
+
+    }
+
+    return (-1, weak, dist, sol);
+    ;; return (strong, weak, dist, sol, atp);
 }
--}
+
+() __deep_fifting__() impure asm
+"@atend @ 1 { execute"
+"    current@ context@ current!"
+"    {"
+"        }END> b>"
+"        <{"
+"        SETCP0 IFNOTRET"
+"        swap <s ref@ 0 swap @procdictkeylen idict@ { B{6E6F206D657468203936} B>$ abort } ifnot @addop"
+"        }> b>"
+"    } : }END>c"
+"    current@ context! current!"
+"} does @atend !"
+;
+
+() __do_deep_fifting__() method_id(777) { __deep_fifting__(); }

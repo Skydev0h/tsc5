@@ -130,18 +130,20 @@ const int    infinity_price = (1 << infinity_shift) - 1;
         int x = 0;
         repeat(lx) {
             int c = t.t:(x);
-            if (c == "S"u) { Sx = x; Sy = y; }
             int ctp = tile_prices.t:(c) + ((abs(Ex - x) + abs(Ey - y)) << astar_dist_shift);
-            if (c == "E"u) { ctp = ctp | fin_bit;}
+            ;; if (c == "E"u) { ctp = ctp | fin_bit;}
             r~t:+( ctp );
+            if (c == "S"u) { Sx = x; Sy = y; }
             x += 1;
         }
         tp~t:+(r);
         y += 1;
     }
 
+    tp~t:=(tp.t:(Ey).t:=(final_tile_price | fin_bit, Ex), Ey);
+
     tuple atp = empty_tuple();
-    tuple row = empty_tuple();
+    tuple row = atp; ;; empty_tuple();
     repeat(lx) { row~t:+(infinity_price); }
     repeat(ly) { atp~t:+(row); }
     atp~t:=(atp.t:(Sy).t:=(0, Sx), Sy);
